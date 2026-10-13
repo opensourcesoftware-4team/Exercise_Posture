@@ -1,0 +1,42 @@
+import json
+
+def get_all_errors_info(file_path):
+    with open(file_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    error_counts = {}
+
+    for session in data:
+        detailed_errors = session.get("detailedErrors", {})
+        for exercise, errors in detailed_errors.items():
+            for error_name, count in errors.items():
+                if count > 0:
+                    if error_name not in error_counts:
+                        error_counts[error_name] = 0
+                    error_counts[error_name] += count
+
+    sorted_errors = sorted(error_counts.items(), key=lambda x: x[1], reverse=True)
+    return sorted_errors
+
+error_descriptions = {
+    "buttWink": "스쿼트 동작 하단부에서 골반이 후방으로 말리",
+    "kneeForward": "스쿼트 동작 시 무릎이 발끝을 과도하게 넘어가",
+    "hipOnly": "스쿼트 동작 시 무릎이 충분히 굽혀지지 않고 엉덩이만 뒤로 빠지",
+    "hipDrop": "플랭크 동작 시 엉덩이가 아래로 처지",
+    "hipHigh": "플랭크 동작 시 엉덩이가 위로 솟",
+    "neckDrop": "플랭크 동작 시 고개가 아래로 떨어지",
+    "neckHigh": "플랭크 동작 시 고개를 과도하게 들",
+    "coreDrop": "푸시업 동작 시 허리와 코어가 아래로 처지",
+    "coreHigh": "푸시업 동작 시 엉덩이와 허리가 위로 솟",
+    "elbowBack": "푸시업 동작 시 팔꿈치가 몸통 쪽으로 과도하게 붙거나 뒤로 빠지",
+    "elbowForward": "푸시업 동작 시 팔꿈치가 어깨선보다 앞으로 과도하게 벌어지"
+}
+
+all_errors = get_all_errors_info('exercise.json')
+
+if all_errors:
+    for error_name, count in all_errors:
+        description = error_descriptions.get(error_name, '알 수 없는 문제가 발생하')
+        print(f"현재 {description}고 있습니다! (총 {count}회)")
+else:
+    print("모든 자세가 정확합니다. 운동을 잘하고 계십니다.")
