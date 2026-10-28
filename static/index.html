@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Motion Fitness Platform</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" crossorigin="anonymous"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;600;800&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="MainStyle.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="community.css">
+    <script type="module" src="community.js"></script>
+    <script type="module" src="moving2.js" defer></script>
+    <script type="module" src="dashboard.js" defer></script>
+</head>
+<body>
+    <nav>
+        <div class="logo">MOTION<span>AI</span></div>
+        <ul class="nav-links">
+            <li class="active" onclick="route('intro-section')">Introduction</li>
+            <li onclick="route('tracker-section')">AI Tracker</li>
+            <li onclick="route('dashboard-section'); if(typeof refreshDashboardFromStorage === 'function') refreshDashboardFromStorage();">Dashboard</li>
+            <li id="community-nav-item"><button id="community-nav" type="button">Community</button></li>
+        </ul>
+        <div style="font-weight: 800; font-size: 0.8rem; border: 1px solid var(--accent); padding: 0.5rem 1.2rem; border-radius: 50px; color: var(--accent); letter-spacing: 0.5px;">CONTECT US</div>
+    </nav>
+
+    <main>
+        <section id="intro-section" class="view-section active">
+            <div class="carousel-container">
+                <div class="carousel-wrapper" id="carousel-wrapper">
+                    
+                    <div class="c-slide" style="text-align: center; align-items: center;">
+                        <p style="letter-spacing: 6px; font-weight: 600; color: var(--accent); margin-bottom: 1.5rem; font-size: 0.9rem;">BIOMETRIC COMPUTER VISION</p>
+                        <h1 style="font-family: 'Urbanist'; font-size: 4.5rem; line-height: 1.1; margin-bottom: 1.5rem; font-weight: 800;">PRECISION<br><span style="color: var(--accent); text-shadow: 0 0 40px var(--accent-glow);">MOTION AI</span></h1>
+                        <p style="max-width: 750px; color: var(--text-muted); font-size: 1.15rem;">인공지능 실시간 포즈 에스티메이션 기술을 적용한 정밀 관절 각도 검사 시스템.<br>당신의 홈 트레이닝을 완벽하게.</p>
+                    </div>
+
+                    <div class="c-slide">
+                        <h2 class="slide-title">Analysis Standards</h2>
+                        <div class="tiled-grid">
+                            <div class="tile">
+                                <div class="icon"><i class="fa-solid fa-person-arrow-down-to-line"></i></div>
+                                <h3>SQUAT</h3>
+                                <p>
+                                    1) 골반 말림 (Butt Wink)<br>
+                                    2) 무릎 과진전 (Knee Forward)<br>
+                                    3) 엉덩이 선행 (Hip Rise)
+                                </p>
+                            </div>
+                            <div class="tile">
+                                <div class="icon"><i class="fa-solid fa-person-running"></i></div>
+                                <h3>PUSH-UP</h3>
+                                <p>
+                                  1) 코어 처짐 (Core Drop)<br>
+                                  2) 엉덩이 솟구침 (Core High)<br>
+                                  3) 팔꿈치 과한 각도(Shoulder Flaring)<br>
+                                  4) 팔꿈치 좁은 각도
+                                </p>
+                            </div>
+                            <div class="tile">
+                                <div class="icon"><i class="fa-solid fa-clock"></i></div>
+                                <h3>PLANK</h3>
+                                <p>
+                                    1) 코어 처짐(Plank Line)<br>
+                                    2) 엉덩이 솟구침<br>
+                                    3) 경추 처짐<br>
+                                    4) 경추 솟구침
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="c-slide">
+                        <h2 class="slide-title">Essential Environment Setup</h2>
+                        <div class="two-column">
+                            <div>
+                                <h3 style="font-size: 1.8rem; margin-bottom: 1.5rem; font-family: 'Urbanist';">정밀한 인식을 위한 두 가지 제약</h3>
+                                <p style="margin-bottom: 25px;">AI 모델의 연산 정밀도를 극대화하고 랜드마크 누락을 방지하기 위해 아래 세팅 조건을 정밀하게 준수해야 합니다.</p>
+                                <ul style="list-style: none;">
+                                    <li style="margin-bottom: 15px; display: flex; align-items: start; gap: 12px; color: var(--text-main); font-weight: 600;"><i class="fa-solid fa-circle-exclamation" style="color:var(--accent); margin-top: 4px;"></i> 신체를 완전한 측면 각도에서 보이도록 카메라 앵글을 배치하십시오.</li>
+                                    <li style="margin-bottom: 15px; display: flex; align-items: start; gap: 12px; color: var(--text-main); font-weight: 600;"><i class="fa-solid fa-circle-exclamation" style="color:var(--accent); margin-top: 4px;"></i> 머리 끝부터 발목 관절까지 전신이 카메라 프레임에 완전히 확보되어야 합니다.</li>
+                                </ul>
+                            </div>
+                            <div class="img-box">
+                                <img src="imgs/pose-estimation-human-ai-vision.webp" alt="Side Profile Workout Setup">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="c-slide">
+                        <h2 class="slide-title">Connectivity Guide</h2>
+                        <div class="two-column">
+                            <div>
+                                <h3 style="font-size: 1.8rem; margin-bottom: 1.5rem; font-family: 'Urbanist';"><i class="fa-brands fa-windows" style="color: var(--accent); margin-right: 10px;"></i> Windows 휴대폰 연결 인프라</h3>
+                                <p style="margin-bottom: 20px;">일반적인 노트북 내장 웹캠은 렌즈 각도가 낮아 왜곡이 발생하기 쉽고 전신 촬영 거리를 확보하기 어렵습니다.</p>
+                                <p>Windows 운영체제의 <strong>'휴대폰 연결'</strong> 기능을 활용하여 스마트폰 후면 카메라를 무선 웹캠으로 동기화하십시오. 유연한 고도 확보가 가능해져 정밀한 모션 랜드마크 분석이 가능해집니다.</p>
+                            </div>
+                            <div class="img-box">
+                                <img src="imgs/3abf0e52-fa02-432f-84d3-6743776b9998.jpg" alt="Mobile Cam Sync">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    
+                    <div class="c-slide">
+                        <h2 class="slide-title">AI Tracker User Guide</h2>
+                        <div class="two-column">
+                            <div>
+                                <h3 style="font-size: 1.8rem; margin-bottom: 1.5rem; font-family: 'Urbanist';">
+                                    <i class="fa-solid fa-play" style="color: var(--accent); margin-right: 10px;"></i> 4단계 코어 분석 프로세스
+                                </h3>
+                                <p style="margin-bottom: 25px; color: var(--text-muted); line-height: 1.6;">
+                                    정밀 실시간 비전 엔진을 가동하기 위한 최적의 파이프라인 순서입니다. 완벽한 데이터 수집을 위해 아래 단계를 준수하십시오.
+                                </p>
+
+                                <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 15px;">
+                                    <li style="display: flex; align-items: flex-start; gap: 12px;">
+                                        <span style="background: var(--accent); color: #fff; border-radius: 50%; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; flex-shrink: 0; margin-top: 2px;">1</span>
+                                        <div>
+                                            <strong style="color: #f8fafc;">타겟 종목 선택:</strong>
+                                            <span style="color: var(--text-muted);">대시보드 진입 전 분석할 운동(스쿼트, 푸시업, 플랭크)옵션을 선택합니다.</span>
+                                        </div>
+                                    </li>
+                                    <li style="display: flex; align-items: flex-start; gap: 12px;">
+                                        <span style="background: var(--accent); color: #fff; border-radius: 50%; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; flex-shrink: 0; margin-top: 2px;">2</span>
+                                        <div>
+                                            <strong style="color: #f8fafc;">카메라 세로 정렬:</strong>
+                                            <span style="color: var(--text-muted);">Windows 휴대폰 연결을 가동하고 관절 랜드마크가 왜곡 없이 전신 전형이 잡히도록 배치합니다.</span>
+                                        </div>
+                                    </li>
+                                    <li style="display: flex; align-items: flex-start; gap: 12px;">
+                                        <span style="background: var(--accent); color: #fff; border-radius: 50%; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; flex-shrink: 0; margin-top: 2px;">3</span>
+                                        <div>
+                                            <strong style="color: #f8fafc;">실시간 운동 수행:</strong>
+                                            <span style="color: var(--text-muted);">인공지능이 랜드마크 위치 연산을 실시간으로 모니터링하며 정석 자세로 세션을 진행합니다.</span>
+                                        </div>
+                                    </li>
+                                    <li style="display: flex; align-items: flex-start; gap: 12px;">
+                                        <span style="background: var(--accent); color: #fff; border-radius: 50%; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; flex-shrink: 0; margin-top: 2px;">4</span>
+                                        <div>
+                                            <strong style="color: #f8fafc;">운동 기록 저장:</strong>
+                                            <span style="color: var(--text-muted);">'분석 종료 및 세션 데이터 저장' 버튼을 통해 해당 운동 기록을 LocalStorage에 최종 저장합니다.</span>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="img-box">
+                                <img src="imgs/tracker.png">
+                            </div>
+                        </div>
+                    </div>
+
+                <div class="c-slide">
+                    <h2 class="slide-title">Dashboard Intelligence</h2>
+                    <div class="two-column">
+                        <div>
+                            <h3 style="font-size: 1.8rem; margin-bottom: 1.5rem; font-family: 'Urbanist';">
+                                <i class="fa-solid fa-chart-line" style="color: var(--accent); margin-right: 10px;"></i>운동 기록 대시보드
+                            </h3>
+                            <p style="margin-bottom: 20px; color: var(--text-muted); line-height: 1.6;">
+                                로컬 스토리지의 운동 기록을 가져와, 핵심 지표 및 솔루션을 제시합니다.
+                            </p>
+                            <div style="display: flex; flex-direction: column; gap: 18px;">
+                                <div>
+                                    <h4 style="color: #38bdf8; font-size: 1.05rem; margin-bottom: 4px;"><i class="fa-solid fa-triangle-exclamation"></i>세션 분석 종료 시 세부 오답 지표</h4>
+                                    <p style="font-size: 0.9rem; color: var(--text-muted); margin: 0;">가장 최근에 수행한 운동 종목의 세부 자세 실수 누적 횟수 & 종목 별 최신 결과표를 제공합니다</p>
+                                </div>
+                                <div>
+                                    <h4 style="color: #38bdf8; font-size: 1.05rem; margin-bottom: 4px;"><i class="fa-solid fa-bezier-curve"></i> 점진적 볼륨 트렌드 (최근 7회차 Trend)</h4>
+                                    <p style="font-size: 0.9rem; color: var(--text-muted); margin: 0;">최근 7회차 기록의 개수 및 플랭크 버틴 초 단위 볼륨 추이를 꺾은선 그래프로 시각화합니다.</p>
+                                </div>
+                                <div>
+                                    <h4 style="color: #38bdf8; font-size: 1.05rem; margin-bottom: 4px;"><i class="fa-solid fa-clock-rotate-left"></i> 분석 수행 히스토리 테이블</h4>
+                                    <p style="font-size: 0.9rem; color: var(--text-muted); margin: 0;">운동 수행 기록 데이터를 긁어와 최신순으로 역정렬하여 날짜, 종목, 볼륨, 정확도 비율을 노출합니다.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="img-box">
+                            <img src="imgs/dashborad.png" alt="Performance Analytics Metrics" style="object-fit: contain;">
+                        </div>
+                    </div>
+                </div>
+                    
+                <div class="c-slide">
+                    <h2 class="slide-title">Latest Session Performance</h2>
+                    <div class="two-column">
+                        <div>
+                            <h3 style="font-size: 1.8rem; margin-bottom: 1.5rem; font-family: 'Urbanist';">
+                                <i class="fa-solid fa-bolt" style="color: var(--accent); margin-right: 10px;"></i>종목별 최신 세션 평가 지표
+                            </h3>
+                            <p style="margin-bottom: 24px; color: var(--text-muted); line-height: 1.6;">
+                                가장 최근에 완료한 운동 세션의 데이터를 즉각적으로 마이닝하여 런타임 수치를 대시보드 인터페이스에 동기화합니다.
+                            </p>
+
+                            <div style="display: flex; flex-direction: column; gap: 20px;">
+                                <div>
+                                    <h4 style="color: #38bdf8; font-size: 1.05rem; margin-bottom: 4px;">
+                                        <i class="fa-solid fa-calculator" style="margin-right: 8px;"></i>최신 세션 정확도 백분율 
+                                    </h4>
+                                    <p style="font-size: 0.9rem; color: var(--text-muted); margin: 0; line-height: 1.5;">
+                                        성공 횟수와 에러 비율을 계산하여 최신 세션의 정밀 점수를 표출합니다.
+                                    </p>
+                                </div>
+                                <div>
+                                    <h4 style="color: #38bdf8; font-size: 1.05rem; margin-bottom: 4px;">
+                                        <i class="fa-solid fa-chart-bar" style="margin-right: 8px;"></i>세부 오답 누적 디스플레이
+                                    </h4>
+                                    <p style="font-size: 0.9rem; color: var(--text-muted); margin: 0; line-height: 1.5;">
+                                        스쿼트, 푸시업, 플랭크 각 종목별로 정의된 에러 횟수를 인터페이스로 시각화합니다.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="img-box-wrapper" style="display: flex; justify-content: center; align-items: center; background: rgba(255, 255, 255, 0.02); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.05); padding: 16px; box-sizing: border-box; width: 100%;">
+                            <div style="width: 100%; max-width: 420px; display: flex; justify-content: center; align-items: center;">
+                                <img src="imgs/latestSession.png" alt="⚡ 종목별 최신 세션 평가 지표 대시보드" style="width: 100%; height: auto; object-fit: contain;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                    
+                <div class="c-slide">
+                    <h2 class="slide-title">Accumulated Data-Based Solution</h2>
+                    <div class="two-column">
+                        <div>
+                            <h3 style="font-size: 1.8rem; margin-bottom: 1.5rem; font-family: 'Urbanist';">
+                                <i class="fa-solid fa-bullseye" style="color: var(--accent); margin-right: 10px;"></i>전 종목 자세 축적 데이터 평가 및 교정 솔루션
+                            </h3>
+                            <p style="margin-bottom: 24px; color: var(--text-muted); line-height: 1.6;">
+                                로컬 스토리지에 누적된 데이터를 종합하여 각 종목 별 총 평균 점수 및 가장 많은 에러 지표를 제공합니다.
+                            </p>
+
+                            <div style="display: flex; flex-direction: column; gap: 20px;">
+                                <div>
+                                    <h4 style="color: #38bdf8; font-size: 1.05rem; margin-bottom: 4px;">
+                                        <i class="fa-solid fa-database" style="margin-right: 8px;"></i>누적 취약점 도메인 추출
+                                    </h4>
+                                    <p style="font-size: 0.9rem; color: var(--text-muted); margin: 0; line-height: 1.5;">
+                                        전체 히스토리 중 가장 높은 빈도로 감지된 에러를 추적하여 사용자의 취약 디테일을 특정합니다.
+                                    </p>
+                                </div>
+                                <div>
+                                    <h4 style="color: #38bdf8; font-size: 1.05rem; margin-bottom: 4px;">
+                                        <i class="fa-solid fa-kit-medical" style="margin-right: 8px;"></i>커스텀 교정 솔루션 알고리즘
+                                    </h4>
+                                    <p style="font-size: 0.9rem; color: var(--text-muted); margin: 0; line-height: 1.5;">
+                                        분석된 취약점에 대응하는 1:1 맞춤형 유튜브 피드백 영상을 제공합니다.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="img-box-wrapper" style="display: flex; justify-content: center; align-items: center; background: rgba(255, 255, 255, 0.02); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.05); padding: 16px; box-sizing: border-box; width: 100%;">
+                            <div style="width: 100%; max-width: 420px; display: flex; justify-content: center; align-items: center;">
+                                <img src="imgs/detailSolution.png" alt="🎯 전 종목 자세 축적 데이터 평가 및 교정 솔루션" style="width: 100%; height: auto; object-fit: contain;">
+                            </div>
+                        </div>
+                    </div>
+                </div>                    
+                    
+            </div>
+                
+                <div class="slide-indicator"><span id="current-slide-num">1</span> / 8</div>
+                <div class="carousel-controls">
+                    <button class="btn-ctrl" onclick="shiftSlide(-1)"><i class="fa-solid fa-chevron-left"></i></button>
+                    <button class="btn-ctrl" onclick="shiftSlide(1)"><i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+            </div>
+        </section>
+
+        <section id="tracker-section" class="view-section">
+            <div class="tracker-box">
+                <h2 style="font-family: 'Urbanist'; font-size: 2.5rem; margin-bottom: 10px;">REALTIME MOTION ANALYZER</h2>
+                <p style="color: var(--text-muted);">MediaPipe 엔진 파이프라인 대기 중</p>
+                
+                <div class="dashboard">
+                    
+                    <div class="video-container" id="video-container">
+                        <div id="rt-accuracy-container" style="position: absolute; top: 16px; left: 16px; right: 16px; z-index: 10; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.08); display: flex; flex-direction: column; gap: 6px; box-sizing: border-box;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                <span style="color: #94a3b8; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.7px; font-family: 'Urbanist';">REAL-TIME ACCURACY</span>
+                                <span id="rt-accuracy-text" style="color: #38bdf8; font-family: 'Urbanist'; font-size: 1.1rem; font-weight: 900; transition: color 0.3s ease;">100%</span>
+                            </div>
+                            <div style="width: 100%; height: 6px; background: rgba(255, 255, 255, 0.15); border-radius: 999px; overflow: hidden;">
+                                <div id="rt-accuracy-bar" style="width: 100%; height: 100%; background-color: #38bdf8; transition: width 0.25s ease-out, background-color 0.3s ease; border-radius: 999px;"></div>
+                            </div>
+                        </div>
+
+                        <video id="webcam" autoplay playsinline></video>
+                        <canvas id="output_canvas"></canvas>
+                        <div class="guideline">카메라를 측면으로 두고 운동하세요</div>
+                    </div>
+
+                    <div class="controls">
+                        <select id="exercise-select">
+                            <option value="squat">스쿼트 (Squat)</option>
+                            <option value="pushup">푸시업 (Push-Up)</option>
+                            <option value="plank">플랭크 (Plank)</option>
+                        </select>
+
+                        <button id="enableWebcamButton">카메라 활성화 및 AI 시작</button>
+
+                        <div class="stat-box" id="stat-box">
+                            <h2>상태 패널</h2>
+                            <p>운동: <span id="current-ex">스쿼트</span></p>
+                            <p>카운트: <span id="count-display">0</span></p>
+                            <p>피드백: <span id="feedback-msg">준비 중...</span></p>
+                        </div>
+                    </div>
+
+                    <div id="section-report" style="display: none;">
+                        <button onclick="location.reload();">다시 운동하기</button>
+                    </div>
+                </div>
+                <button id="finishSessionButton" style="background: var(--accent); border: none; color: white; padding: 15px 35px; border-radius: 50px; font-weight: 700; cursor: pointer; box-shadow: 0 10px 25px var(--accent-glow);">
+                    분석 종료 및 세션 데이터 저장
+                </button>
+            </div>
+        </section>
+
+        <section id="dashboard-section" class="view-section">
+            <div class="dashboard-header">
+                <div>
+                    <h2>Performance Analytics</h2>
+                    <p style="color: var(--text-muted); margin-top: 5px;">누적된 오답 원인 분석 및 교정 트렌드 대시보드</p>
+                </div>
+                <button class="state-toggle" onclick="toggleDataState()">
+                    <i class="fa-solid fa-shuffle"></i> 데이터 유무 화면 구성전환
+                </button>
+            </div>
+
+            <div id="db-empty-state" class="empty-state">
+                <i class="fa-solid fa-chart-pie"></i>
+                <h3>분석된 세션 로그가 존재하지 않습니다</h3>
+                <p style="text-align: justify;">시스템에 측정된 운동 이력이 확인되지 않습니다. 상단의 'AI Tracker' 메뉴로 이동하여 첫 번째 포즈 랜드마크 분석 세션을 완료해 주십시오.</p>
+            </div>
+
+            <div id="db-populated-state" class="data-state" style="display: none;">
+
+                <div id="error-list-container" class="chart-card">
+                    <h3 style="font-size: 1.25rem; font-weight: 800; color: #38bdf8; margin-bottom: 1.5rem;">
+                        가장 최근 종목의 자세 디테일 오답 
+                    </h3>
+                    <div style="color: var(--text-muted); font-size: 0.9rem;">
+                        세션 분석 종료 시 세부 오답 지표가 여기에 동적으로 빌드됩니다.
+                    </div>
+                </div>
+
+                <div class="chart-card trend-chart-box">
+                    <h3>최근 회차별 수행 볼륨 트렌드 (최근 7회차 Trend)</h3>
+                    <div class="chart-container" style="position: relative; height: 200px; width: 100%;">
+                        <canvas id="analyticsChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="chart-card mechanical-evaluation" style="margin-bottom: 1.5rem;">
+                    <h3 style="font-size: 1.25rem; font-weight: 800; color: #38bdf8; margin: 0 0 0.25rem 0;">
+                        종목별 최신 세션 평가 지표
+                    </h3>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;">
+                        각 운동 종목별로 가장 최근에 수행 완료된 단일 세션의 정확도 점수와 실시간 세부 오답 명세입니다.
+                    </p>
+
+                    <div id="latest-evaluations-container" style="display: flex; flex-direction: column; gap: 1.25rem;">
+                        </div>
+                </div>
+
+                <div class="chart-card recovery-recommendation" style="margin-top: 1.5rem;">
+                    <h3 style="font-size: 1.3rem; font-weight: 800; color: #38bdf8; margin-bottom: 0.25rem;">
+                        전 종목 자세 축적 데이터 평가 및 교정 솔루션
+                    </h3>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 2rem;">
+                        각 운동 종목별 전체 세션의 평균 정확도와 누적 오답 디테일을 실시간 연산하여 개별 맞춤 가이드라인 및 처방 영상을 제공합니다.
+                        (가장 많은 실수를 한 자세 디테일의 영상)
+                    </p>
+
+                    <div id="recommend-master-container" style="display: flex; flex-direction: column; gap: 2rem;">
+                        </div>
+                </div>
+
+                <div class="chart-card table-card" style="overflow-x: auto;">
+                    <h3>최근 분석 수행 히스토리</h3>
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 1.25rem;">
+                        <thead>
+                            <tr style="background: rgba(255,255,255,0.02); color: #64748b; font-size: 0.85rem; border-bottom: 1px solid rgba(255,255,255,0.08);">
+                                <th style="padding: 12px 8px; text-align: center;">날짜 및 시간</th>
+                                <th style="padding: 12px 8px; text-align: center;">종목</th>
+                                <th style="padding: 12px 8px; text-align: center;">수행 볼륨</th>
+                                <th style="padding: 12px 8px; text-align: center;">자세 정확도</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-table-body">
+                            </tbody>
+                    </table>
+                </div>
+                
+            </div>
+        </section>
+
+        <section id="community-section" class="view-section" aria-labelledby="community-heading">
+            <header class="community-header">
+                <div><p class="community-eyebrow">MOTION AI / COMMUNITY</p>
+                    <h1 id="community-heading">함께 나누는 운동 이야기<span>.</span></h1>
+                    <p class="community-subtitle">오늘의 발견이 누군가의 더 좋은 움직임이 되도록.</p>
+                </div>
+                <span class="community-label">MOVE · LEARN · SHARE</span>
+            </header>
+            <p id="community-status" role="status" aria-live="polite"></p>
+            <div id="community-list">
+                <div class="community-toolbar">
+                    <div id="community-filters" role="group" aria-label="운동 종류별 필터">
+                        <button type="button" data-exercise="" aria-pressed="true">전체</button>
+                        <button type="button" data-exercise="squat" aria-pressed="false">스쿼트</button>
+                        <button type="button" data-exercise="pushup" aria-pressed="false">푸시업</button>
+                        <button type="button" data-exercise="plank" aria-pressed="false">플랭크</button>
+                        <button type="button" data-exercise="other" aria-pressed="false">기타</button>
+                    </div>
+                    <button id="community-new" class="community-button community-primary" type="button">+ 글쓰기</button>
+                </div>
+                <div class="community-list-info"><p id="community-count" aria-live="polite"></p>
+                    <button id="community-refresh" type="button">↻ 새로고침</button></div>
+                <div id="community-cards" aria-live="polite"></div>
+                <div id="community-pagination" aria-label="게시글 페이지"></div>
+                <aside class="community-footnote">운동 경험과 팁을 자유롭게 나눠 주세요. 닉네임은 표시용이며, 개인정보는 게시하지 마세요.</aside>
+            </div>
+            <div id="community-write" hidden>
+                <div class="community-panel-heading"><h2>새 이야기 작성</h2><p>작은 팁 하나부터, 꾸준히 해온 경험까지.</p></div>
+                <form id="community-form" novalidate>
+                    <fieldset id="community-fields">
+                        <div class="community-form-row">
+                            <div><label for="community-nickname">닉네임 <span>필수 · 최대 20자</span></label>
+                                <input id="community-nickname" name="nickname" placeholder="어떤 이름으로 나눌까요?" autocomplete="nickname" required aria-describedby="community-error-nickname">
+                                <p id="community-error-nickname" class="community-field-error"></p></div>
+                            <div><label for="community-exercise_type">운동 종류 <span>필수</span></label>
+                                <select id="community-exercise_type" name="exercise_type" required aria-describedby="community-error-exercise_type">
+                                    <option value="">운동 종류 선택</option><option value="squat">스쿼트</option>
+                                    <option value="pushup">푸시업</option><option value="plank">플랭크</option><option value="other">기타</option>
+                                </select><p id="community-error-exercise_type" class="community-field-error"></p></div>
+                        </div>
+                        <label for="community-title">제목 <span>필수 · 최대 100자</span></label>
+                        <input id="community-title" name="title" placeholder="나누고 싶은 이야기의 제목을 적어 주세요" required aria-describedby="community-error-title">
+                        <p id="community-error-title" class="community-field-error"></p>
+                        <label for="community-content">내용 <span>필수 · 최대 5,000자</span></label>
+                        <textarea id="community-content" name="content" rows="10" placeholder="운동하며 알게 된 팁, 자세를 개선한 경험 등을 들려주세요." required aria-describedby="community-error-content"></textarea>
+                        <div class="community-counter-row"><p id="community-error-content" class="community-field-error"></p><span id="community-counter">0 / 5,000</span></div>
+                        <p class="community-form-note">등록한 글은 이 게시판에 접속하는 사람에게 공개됩니다. 현재 버전에서는 수정·삭제를 지원하지 않으니 등록 전 내용을 확인해 주세요.</p>
+                        <div class="community-form-actions"><button id="community-cancel" type="button" class="community-button community-secondary">목록으로</button><button id="community-submit" type="submit" class="community-button community-primary">게시글 등록</button></div>
+                    </fieldset>
+                    <p id="community-form-status" role="status" aria-live="polite"></p>
+                </form>
+            </div>
+            <div id="community-detail" hidden>
+                <button id="community-back" type="button" class="community-button community-secondary">← 목록으로</button>
+                <article id="community-detail-content"></article>
+            </div>
+        </section>
+    </main>
+
+<script>
+    // ==========================================================================
+    // A. SINGLE PAGE VIEW ROUTER (SPA 라우팅 가드 적용)
+    // ==========================================================================
+    function route(targetViewId) {
+        // 1. 컴포넌트 ID 명세 매핑 보정 가드 (NPE 원천 차단)
+        let actualSectionId = targetViewId;
+        if (targetViewId.endsWith('-view')) {
+            actualSectionId = targetViewId.replace('-view', '-section');
+        }
+
+        const targetSection = document.getElementById(actualSectionId);
+        if (!targetSection) {
+            console.error(`[Router Error] 해당 ID를 가진 섹션을 DOM에서 찾을 수 없습니다: ${actualSectionId}`);
+            return;
+        }
+
+        // 2. 전체 섹션 비활성화 및 타겟 섹션 활성화
+        document.querySelectorAll('.view-section').forEach(view => view.classList.remove('active'));
+        targetSection.classList.add('active');
+        document.body.classList.toggle('community-open', actualSectionId === 'community-section');
+
+        // 3. 글로벌 내비게이션 하이라이팅 상태 동기화
+        const navItems = document.querySelectorAll('.nav-links li');
+        navItems.forEach(item => {
+            item.classList.remove('active');
+            
+            // 내비게이션 텍스트와 ID 매핑 검증
+            const navText = item.innerText.toLowerCase().replace(/\s+/g, '');
+            const targetText = actualSectionId.toLowerCase();
+            
+            if (targetText.includes(navText) || navText.includes(targetText.split('-')[0])) {
+                item.classList.add('active');
+            }
+        });
+
+        // 4. [UX 방어 코드] 대시보드 진입 시 로컬스토리지 데이터 유무에 따른 상용 상태 복구
+        if (actualSectionId === 'dashboard-section') {
+            syncDashboardStateWithStorage();
+        }
+    }
+
+    // ==========================================================================
+    // B. INTRODUCTION CAROUSEL CORE ENGINE (안정화 버전)
+    // ==========================================================================
+    let slideIndex = 0;
+    const wrapper = document.getElementById('carousel-wrapper');
+    const numIndicator = document.getElementById('current-slide-num');
+    const totalSlidesCount = wrapper.querySelectorAll('.c-slide').length;
+
+    function shiftSlide(direction) {
+        // 객체 참조 무결성 검증 가드
+        if (!wrapper || !numIndicator) return;
+
+        slideIndex += direction;
+        if (slideIndex < 0) slideIndex = 0;
+        if (slideIndex >= totalSlidesCount) slideIndex = totalSlidesCount - 1;
+
+        // 인라인 스타일 가속 하드웨어 렌더링
+        wrapper.style.transform = `translateX(-${slideIndex * 100}%)`;
+        numIndicator.innerText = slideIndex + 1;
+    }
+
+    // 키보드 방향키 전역 이벤트 핸들러 바인딩
+    document.addEventListener('keydown', (e) => {
+        const introSection = document.getElementById('intro-section');
+        if (introSection && introSection.classList.contains('active')) {
+            if (e.key === 'ArrowRight') shiftSlide(1);
+            if (e.key === 'ArrowLeft') shiftSlide(-1);
+        }
+    });
+
+    // ==========================================================================
+    // C. DASHBOARD DATA STATE CONTROLLER (로컬스토리지 동기화 및 테스트용 토글)
+    // ==========================================================================
+    
+    /**
+     * 로컬스토리지 상태를 읽어 Empty / Populated UI 상태를 브라우저에 강제 동기화
+     */
+    function syncDashboardStateWithStorage() {
+        const history = JSON.parse(localStorage.getItem("workoutHistory")) || [];
+        const emptyElement = document.getElementById('db-empty-state');
+        const populatedElement = document.getElementById('db-populated-state');
+
+        if (!emptyElement || !populatedElement) return;
+
+        if (history.length > 0) {
+            emptyElement.style.display = 'none';
+            populatedElement.style.display = 'grid';
+        } else {
+            emptyElement.style.display = 'flex';
+            populatedElement.style.display = 'none';
+        }
+    }
+
+    /**
+     * [테스트용 핸들러] 데이터 유무 상태 강제 가상 스위칭
+     */
+    function toggleDataState() {
+        const emptyElement = document.getElementById('db-empty-state');
+        const populatedElement = document.getElementById('db-populated-state');
+
+        if (!emptyElement || !populatedElement) {
+            console.error("[State Error] 대시보드 상태 제어 엘리먼트를 찾을 수 없습니다.");
+            return;
+        }
+
+        // 현재 렌더링 상태를 기준으로 반전 토글 처리 (인라인 값 스캐닝)
+        const isCurrentlyEmpty = emptyElement.style.display !== 'none';
+
+        if (isCurrentlyEmpty) {
+            emptyElement.style.display = 'none';
+            populatedElement.style.display = 'grid';
+            console.log("[Test Engine] 대시보드가 '데이터 있음(Populated)' 상태로 전환되었습니다.");
+        } else {
+            emptyElement.style.display = 'flex';
+            populatedElement.style.display = 'none';
+            console.log("[Test Engine] 대시보드가 '데이터 없음(Empty)' 상태로 전환되었습니다.");
+        }
+    }
+</script>
+</body>
+</html>

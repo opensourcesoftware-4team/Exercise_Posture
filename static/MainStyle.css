@@ -1,0 +1,154 @@
+/* ==========================================================================
+   1. CORE THEME & VARIABLES 
+   ========================================================================== */
+:root {
+    --bg-primary: #020617;
+    --bg-secondary: #0f172a;
+    --accent: #0ea5e9;
+    --accent-glow: rgba(14, 165, 233, 0.2);
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --glass: rgba(30, 41, 59, 0.7);
+    --border: rgba(255, 255, 255, 0.08);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    background-color: var(--bg-primary);
+    color: var(--text-main);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+}
+
+/* ==========================================================================
+   2. NAVIGATION BAR
+   ========================================================================== */
+nav {
+    position: fixed;
+    top: 0; width: 100%;
+    background: var(--glass);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 1.2rem 4rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 1000;
+}
+.logo { font-family: 'Urbanist', sans-serif; font-weight: 800; font-size: 1.5rem; letter-spacing: -1px; }
+.logo span { color: var(--accent); }
+.nav-links { display: flex; gap: 2.5rem; list-style: none; }
+.nav-links li { cursor: pointer; font-weight: 600; font-size: 0.9rem; color: var(--text-muted); transition: 0.3s; }
+.nav-links li:hover, .nav-links li.active { color: var(--accent); }
+
+/* ==========================================================================
+   3. STRUCTURE LAYOUT
+   ========================================================================== */
+main { margin-top: 80px; flex-grow: 1; display: flex; justify-content: center; align-items: center; padding: 40px; }
+.view-section { display: none; width: 100%; max-width: 1280px; animation: fadeIn 0.5s ease forwards; }
+.view-section.active { display: block; }
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==========================================================================
+   4. HIGH-FIDELITY CAROUSEL (소개 페이지)
+   ========================================================================== */
+.carousel-container {
+    width: 100%; height: 680px;
+    background: var(--bg-secondary);
+    border-radius: 24px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 40px 100px -20px rgba(0,0,0,0.7);
+    border: 1px solid var(--border);
+}
+.carousel-wrapper { display: flex; width: 100%; height: 100%; transition: transform 0.6s cubic-bezier(0.65, 0, 0.35, 1); }
+.c-slide { flex: 0 0 100%; width: 100%; height: 100%; padding: 60px 80px; display: flex; flex-direction: column; justify-content: center; position: relative; }
+
+/* 슬라이드 내부 타이틀 규칙 */
+.slide-title { font-family: 'Urbanist', sans-serif; font-size: 2.5rem; margin-bottom: 2.5rem; border-left: 5px solid var(--accent); padding-left: 20px; text-transform: uppercase; letter-spacing: 1px; }
+.two-column { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 50px; align-items: center; }
+.tiled-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.tile { background: rgba(255,255,255,0.02); padding: 35px; border-radius: 20px; border: 1px solid var(--border); }
+.tile .icon { font-size: 2.5rem; color: var(--accent); margin-bottom: 20px; }
+.tile h3 { font-family: 'Urbanist', sans-serif; font-size: 1.5rem; margin-bottom: 10px; }
+.tile p, .two-column p { color: var(--text-muted); line-height: 1.7; font-size: 1.05rem; }
+
+.img-box { width: 100%; height: 380px; border-radius: 16px; overflow: hidden; border: 1px solid var(--border); }
+.img-box img { width: 100%; height: 100%; object-fit: cover; }
+
+.img-box-wrapper { 
+    width: 100%; 
+    height: auto; /* 고정 높이 제거, 컨텐츠에 맞추기 */
+    min-height: 380px; /* 최소 높이만 방어선으로 구축 */
+    border-radius: 16px; 
+    overflow: hidden; 
+    border: 1px solid var(--border); 
+}
+.img-box-wrapper img { 
+    width: 100%; 
+    height: auto; /* 무조건 원본 비율 유지 */
+    object-fit: contain; 
+}
+
+/* 컨트롤러 무대 */
+.carousel-controls { position: absolute; bottom: 40px; right: 50px; display: flex; gap: 15px; z-index: 10; }
+.btn-ctrl { background: rgba(255,255,255,0.03); border: 1px solid var(--border); color: white; width: 50px; height: 50px; border-radius: 50%; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; }
+.btn-ctrl:hover { background: var(--accent); border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 0 20px var(--accent-glow); }
+.slide-indicator { position: absolute; bottom: 50px; left: 50px; color: var(--text-muted); font-weight: 600; font-size: 0.95rem; }
+
+/* ==========================================================================
+   5. DASHBOARD & DATA VISUALIZATION (대시보드 페이지)
+   ========================================================================== */
+.dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; border-bottom: 1px solid var(--border); padding-bottom: 20px; }
+.dashboard-header h2 { font-family: 'Urbanist', sans-serif; font-size: 2.5rem; }
+
+/* 상태 제어용 토글 버튼 (개발 검증용) */
+.state-toggle { background: transparent; border: 1px dashed var(--accent); color: var(--accent); padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.3s; }
+.state-toggle:hover { background: var(--accent); color: white; }
+
+/* 비어있는 상태 (Empty State) */
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 100px 0; background: var(--bg-secondary); border-radius: 24px; border: 1px dashed var(--border); }
+.empty-state i { font-size: 4rem; color: var(--text-muted); margin-bottom: 20px; opacity: 0.4; }
+.empty-state h3 { font-size: 1.5rem; margin-bottom: 10px; }
+.empty-state p { color: var(--text-muted); max-width: 500px; }
+
+/* 데이터가 존재하는 상태 (Data State) */
+.data-state { display: none; grid-template-columns: 1fr 1.2fr; gap: 30px; }
+.chart-card { background: var(--bg-secondary); border-radius: 20px; border: 1px solid var(--border); padding: 30px; }
+.chart-card h3 { font-family: 'Urbanist', sans-serif; font-size: 1.4rem; margin-bottom: 25px; color: var(--accent); letter-spacing: 0.5px; }
+
+/* 오답 분포 바 차트 */
+.bar-list { display: flex; flex-direction: column; gap: 24px; }
+.bar-item { display: flex; align-items: center; gap: 20px; }
+.bar-label { width: 140px; font-weight: 600; font-size: 0.9rem; color: var(--text-muted); }
+.bar-track { flex-grow: 1; height: 14px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden; }
+.bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #6366f1); box-shadow: 0 0 15px var(--accent-glow); }
+.bar-value { width: 50px; text-align: right; font-weight: 600; font-size: 0.95rem; }
+
+/* SVG 트렌드 꺾은선 차트 */
+.trend-chart-box { display: flex; flex-direction: column; height: 100%; }
+.svg-container { flex-grow: 1; min-height: 220px; position: relative; margin-top: 10px; }
+svg { width: 100%; height: 100%; }
+.area-gradient { fill: url(#bg-grad); }
+.line-path { fill: none; stroke: var(--accent); stroke-width: 4; stroke-linecap: round; }
+.chart-labels { display: flex; justify-content: space-between; margin-top: 15px; color: var(--text-muted); font-size: 0.85rem; padding: 0 10px; }
+
+/* 리포트 테이블 */
+.table-card { grid-column: span 2; }
+table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+th { text-align: left; padding: 16px 20px; border-bottom: 2px solid #1e293b; color: var(--accent); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; }
+td { padding: 18px 20px; border-bottom: 1px solid #1e293b; font-size: 1rem; color: #e2e8f0; }
+
+/* ==========================================================================
+   6. TRACKER INTERFACE PLACEHOLDER
+   ========================================================================== */
+.tracker-box { background: var(--bg-secondary); border-radius: 24px; border: 1px solid var(--border); padding: 60px; text-align: center; }
+.camera-feed-mock { width: 100%; max-width: 800px; height: 450px; background: #020617; border: 2px dashed rgba(255,255,255,0.1); margin: 30px auto; border-radius: 16px; display: flex; align-items: center; justify-content: center; }
+
