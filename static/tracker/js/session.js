@@ -1,6 +1,12 @@
 // 세션 하나의 상태 흐름, 집계, 기록 만들기, 저장 요청 (HANDOFF 6장, 7.1, 7.5, 7.6)
 // DOM을 쓰지 않으므로 녹화한 랜드마크를 넣어 Node 테스트로 그대로 확인할 수 있다.
-import { COUNTDOWN_SECONDS, ERROR_HOLD_SECONDS, MAX_FRAME_GAP_SECONDS, SMOOTHING_FRAMES } from "./config.js";
+import {
+  COUNTDOWN_SECONDS,
+  ERROR_HOLD_SECONDS,
+  MAX_FRAME_GAP_SECONDS,
+  SMOOTHING_FRAMES,
+  STAGE_WARN_MARGIN,
+} from "./config.js";
 import { ERROR_NAMES, STATUS } from "./catalog.js";
 import { createSmoother, measureAngles } from "./geometry.js";
 import { readBody } from "./pose-engine.js";
@@ -73,9 +79,16 @@ function cuesOf(event) {
   return [event.key];
 }
 
+// 지표의 화면 단계 (추가 기능 F2): 기준을 넘으면 bad(수정), 기준까지 STAGE_WARN_MARGIN 이내면 warn(주의)
+export function stageOf(margin) {
+  if (margin < 0) return "bad";
+  if (margin <= STAGE_WARN_MARGIN) return "warn";
+  return "good";
+}
+
 // 측정하지 않는 프레임의 결과
 function statusOnly(status, angles = null) {
-  return { status, cues: [], success: false, angles, events: [] };
+  return { status, cues: [], success: false, angles, events: [], indicators: [], points: null };
 }
 
 // 세션을 만든다. 만든 순간이 시작이고, countdownSeconds 뒤부터 측정한다.
@@ -97,7 +110,7 @@ export function createSession(exercise, now, countdownSeconds = COUNTDOWN_SECOND
 
   // 측정 중인 프레임: 규칙 판정 → 0.4초 규칙 → 집계 → 시간 누적
   function judge(angles, points, dt) {
-    const { events, holding } = rule.update(angles, points);
+    const { events, holding, indicators } = rule.update(angles, points);
     const confirmed = holds.update(holding, dt).map((key) => ({ type: "error", key }));
     const cues = [];
     let success = false;
@@ -111,14 +124,23 @@ export function createSession(exercise, now, countdownSeconds = COUNTDOWN_SECOND
     const warning = holds.isWarning();
     if (warning) stats.warningSeconds += dt;
     else stats.goodSeconds += dt;
-    return { status: warning ? null : STATUS.measuring, cues, success, angles, events };
+    return {
+      status: warning ? null : STATUS.measuring,
+      cues,
+      success,
+      angles,
+      events,
+      indicators: indicators.map((indicator) => ({ ...indicator, stage: stageOf(indicator.margin) })),
+      points,
+    };
   }
 
   return {
     stats,
     // 프레임 1장을 처리한다. landmarks는 MediaPipe 결과(사람이 없으면 null), frameAt은 밀리초다.
     // 반환: status(상태 문구, 없으면 null), cues(오답 안내 id), success(올바른 반복 완료),
-    //       angles(다듬은 각도), events(이번 프레임에 끝난 반복·범위 미달과 그 판정 값)
+    //       angles(다듬은 각도), events(이번 프레임에 끝난 반복·범위 미달과 그 판정 값),
+    //       indicators(지표와 화면 단계, 측정 중일 때만), points(판정에 쓴 한쪽 몸의 픽셀 좌표, 측정 중일 때만)
     processFrame(landmarks, width, height, frameAt) {
       const dt = elapsed(frameAt);
       if (frameAt < measureFrom) {

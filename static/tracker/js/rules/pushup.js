@@ -2,19 +2,28 @@
 import { LYING_MAX_ANGLE, PUSHUP } from "../config.js";
 import { isBelowLine } from "../geometry.js";
 
-// 지금 프레임에서 조건이 참인 지속 오답 키. 0.4초 규칙은 session.js가 적용한다.
+// 지금 프레임의 지표. 화면 색·패널·연습 힌트와 지속 오답 판정이 이 값 하나를 함께 쓴다.
+// margin = 기준까지 남은 여유(도). 음수면 기준을 넘은 상태이고, 그때 errorKey가 지속 오답 후보가 된다.
 // 위·아래(앞·뒤) 키는 한쪽만 나오므로 같은 순간에 함께 기록되지 않는다.
-function holdingErrors(angles, points) {
-  const holding = [];
-  if (angles.bodyLine < PUSHUP.ALIGN_MIN) {
-    holding.push(isBelowLine(points.hip, points.shoulder, points.ankle) ? "coreDrop" : "coreHigh");
-  }
+function indicatorsOf(angles, points) {
+  const indicators = [
+    {
+      key: "bodyLine",
+      value: angles.bodyLine,
+      margin: angles.bodyLine - PUSHUP.ALIGN_MIN,
+      errorKey: isBelowLine(points.hip, points.shoulder, points.ankle) ? "coreDrop" : "coreHigh",
+    },
+  ];
   if (angles.elbow >= PUSHUP.TOP_MIN) {
     // 손 위치는 팔을 편 위쪽 자세에서만 본다
-    if (angles.armLean > PUSHUP.ARM_LEAN_LIMIT) holding.push("handForward");
-    if (angles.armLean < -PUSHUP.ARM_LEAN_LIMIT) holding.push("handBackward");
+    indicators.push({
+      key: "armLean",
+      value: angles.armLean,
+      margin: PUSHUP.ARM_LEAN_LIMIT - Math.abs(angles.armLean),
+      errorKey: angles.armLean > 0 ? "handForward" : "handBackward",
+    });
   }
-  return holding;
+  return indicators;
 }
 
 function newAttempt(elbow) {
@@ -65,10 +74,13 @@ export function createPushupRule() {
       return angles.bodyLevel <= LYING_MAX_ANGLE && points.wrist.y > points.shoulder.y;
     },
 
-    // 반환: events = 이번 프레임에 끝난 반복·범위 미달, holding = 지금 조건이 참인 지속 오답 키
+    // 반환: events = 이번 프레임에 끝난 반복·범위 미달, holding = 지금 조건이 참인 지속 오답 키,
+    //       indicators = 지금 프레임의 지표
     update(angles, points) {
       const event = trackRep(angles.elbow);
-      return { events: event ? [event] : [], holding: holdingErrors(angles, points) };
+      const indicators = indicatorsOf(angles, points);
+      const holding = indicators.filter((indicator) => indicator.margin < 0).map((indicator) => indicator.errorKey);
+      return { events: event ? [event] : [], holding, indicators };
     },
   };
 }

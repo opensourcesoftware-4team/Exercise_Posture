@@ -2,6 +2,8 @@
 import { MIN_VISIBILITY, SQUAT } from "../config.js";
 import { median } from "../geometry.js";
 
+const BASELINE_FRAMES = 60; // heelLift 기준에 쓰는 최근 선 자세 프레임 수 (30fps에서 약 2초)
+
 // 뒤꿈치·발끝이 모두 보이는가. 발이 가려진 프레임은 heelLift 비교에서 뺀다.
 function feetVisible(points) {
   return points.heel.visibility >= MIN_VISIBILITY && points.toe.visibility >= MIN_VISIBILITY;
@@ -25,6 +27,23 @@ function judgeAttempt(attempt) {
   return { type: "rep", errors, measures };
 }
 
+// 지금 프레임의 지표 (화면 색·패널·연습 힌트에 쓴다). 반복당 판정과 같은 각도, 같은 기준값이다.
+// margin = 기준까지 남은 여유(도). 음수면 기준을 넘은 상태다. heelRise를 잴 수 없으면 null이다.
+function indicatorsOf(angles, heelRise) {
+  const indicators = [
+    {
+      key: "torsoShin",
+      value: angles.torsoShin,
+      margin: SQUAT.TORSO_SHIN_LIMIT - Math.abs(angles.torsoShin),
+      errorKey: angles.torsoShin > 0 ? "torsoLean" : "shinLean",
+    },
+  ];
+  if (heelRise !== null) {
+    indicators.push({ key: "heelRise", value: heelRise, margin: SQUAT.HEEL_LIFT_LIMIT - heelRise, errorKey: "heelLift" });
+  }
+  return indicators;
+}
+
 // 세션마다 새로 만든다. 판정에 필요한 상태는 이 안에만 둔다.
 export function createSquatRule() {
   let standingSeen = false;
@@ -39,29 +58,33 @@ export function createSquatRule() {
     },
 
     // 서 있음 → 35° 초과: 시도 시작 → 70° 이상: 통과 구간 → 30° 이하로 돌아옴: 판정
-    // 반환: events = 이번 프레임에 끝난 반복·범위 미달, holding = 스쿼트는 지속 오답이 없어 항상 빈 배열
+    // 반환: events = 이번 프레임에 끝난 반복·범위 미달, holding = 스쿼트는 지속 오답이 없어 항상 빈 배열,
+    //       indicators = 지금 프레임의 지표
     update(angles, points) {
       const footSeen = feetVisible(points);
+      const events = [];
       if (!attempt) {
-        if (footSeen) standingFeet.push(angles.foot);
+        if (footSeen) standingFeet = [...standingFeet, angles.foot].slice(-BASELINE_FRAMES);
         if (angles.thigh > SQUAT.ATTEMPT_MIN) {
           const standingFoot = standingFeet.length > 0 ? median(standingFeet) : null;
           attempt = { depth: angles.thigh, standingFoot, torsoShin: [], feet: [] };
         }
-        return { events: [], holding: [] };
+      } else {
+        attempt.depth = Math.max(attempt.depth, angles.thigh);
+        if (angles.thigh >= SQUAT.PASS_MIN) {
+          attempt.torsoShin.push(angles.torsoShin);
+          if (footSeen) attempt.feet.push(angles.foot);
+        }
+        if (angles.thigh <= SQUAT.STAND_MAX) {
+          events.push(judgeAttempt(attempt));
+          attempt = null;
+          standingFeet = []; // 다음 반복의 기준은 다시 선 뒤에 새로 잰다
+        }
       }
 
-      attempt.depth = Math.max(attempt.depth, angles.thigh);
-      if (angles.thigh >= SQUAT.PASS_MIN) {
-        attempt.torsoShin.push(angles.torsoShin);
-        if (footSeen) attempt.feet.push(angles.foot);
-      }
-      if (angles.thigh > SQUAT.STAND_MAX) return { events: [], holding: [] };
-
-      const event = judgeAttempt(attempt);
-      attempt = null;
-      standingFeet = []; // 다음 반복의 기준은 다시 선 뒤에 새로 잰다
-      return { events: [event], holding: [] };
+      const baseline = attempt ? attempt.standingFoot : standingFeet.length > 0 ? median(standingFeet) : null;
+      const heelRise = footSeen && baseline !== null ? angles.foot - baseline : null;
+      return { events, holding: [], indicators: indicatorsOf(angles, heelRise) };
     },
   };
 }

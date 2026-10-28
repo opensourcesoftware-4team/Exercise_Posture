@@ -9,6 +9,9 @@ export const ERROR_HOLD_SECONDS = 0.4; // 같은 오답 조건이 이만큼 이�
 export const VOICE_COOLDOWN_SECONDS = 2.5; // 같은 안내의 음성 반복 금지 시간 (레거시 값)
 export const MAX_FRAME_GAP_SECONDS = 1; // 프레임 간격이 이보다 길면(탭 전환 등) 그 시간은 세지 않는다
 
+// 추가 기능 F2: 기준까지 이 각도 이내로 다가가면 "주의"(주황)로 보여 준다
+export const STAGE_WARN_MARGIN = 5;
+
 // 7.6 세션 흐름
 export const COUNTDOWN_SECONDS = 10; // 준비 카운트다운 (레거시 값)
 
