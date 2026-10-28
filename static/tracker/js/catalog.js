@@ -59,6 +59,43 @@ export const MEASURE_LABELS = {
   elbowMax: "바닥 이후 팔꿈치 최대",
 };
 
+// 지표 이름 (추가 기능 F2 패널)
+export const INDICATOR_LABELS = {
+  torsoShin: "상체–정강이 차",
+  heelRise: "뒤꿈치",
+  bodyLine: "몸통 정렬",
+  armLean: "팔 기울기",
+  neck: "목 정렬",
+};
+
+// 연습 모드 권유형 힌트 (추가 기능 F1). 위에 있을수록 먼저 보여 주고, 한 번에 하나만 보인다.
+// keys: 이 힌트를 띄우는 오답 키 또는 안내 id (주황 이상인 지표, 방금 끝난 범위 미달)
+export const PRACTICE_HINTS = {
+  squat: [
+    { keys: ["heelLift"], text: "뒤꿈치를 바닥에 붙여 볼까요?" },
+    { keys: ["torsoLean"], text: "가슴을 조금만 세워 볼까요?" },
+    { keys: ["shinLean"], text: "엉덩이를 조금 뒤로 빼 볼까요?" },
+    { keys: ["partialRep"], text: "조금만 더 앉아 볼까요?" },
+  ],
+  pushup: [
+    { keys: ["coreDrop", "coreHigh"], text: "배에 힘을 주고 몸을 일직선으로 만들어 볼까요?" },
+    { keys: ["handForward", "handBackward"], text: "손을 어깨 바로 아래에 두어 볼까요?" },
+    { keys: ["partialRepShallow"], text: "가슴을 조금 더 내려 볼까요?" },
+    { keys: ["partialRepLockout"], text: "팔을 끝까지 펴 볼까요?" },
+  ],
+  plank: [
+    { keys: ["hipDrop", "hipHigh"], text: "엉덩이를 몸과 일직선으로 맞춰 볼까요?" },
+    { keys: ["neckDrop", "neckHigh"], text: "시선을 바닥 조금 앞쪽에 두어 볼까요?" },
+  ],
+};
+
+// 모드별 화면 문구 (추가 기능 F1)
+export const MODE_TEXT = {
+  finishRecord: "종료하고 저장",
+  finishPractice: "연습 끝내기",
+  practiceEnd: "연습은 기록되지 않았어요.",
+};
+
 // 상태 안내 (화면에만 표시)
 export const STATUS = {
   loading: "AI 모델을 불러오는 중이에요...",

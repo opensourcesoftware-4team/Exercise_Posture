@@ -4,11 +4,13 @@ import { VOICE_COOLDOWN_SECONDS } from "./config.js";
 
 const WARNING_HOLD_MS = 3000; // 경고 문구를 최소한 보여 주는 시간 (레거시 값)
 
-// elements: message(문구), panel(경고 색이 바뀌는 상자), count(횟수), accuracyText, accuracyBar
+// elements: message(문구), panel(경고 색이 바뀌는 상자), count(횟수), accuracyText, accuracyBar,
+//           hint(연습 모드 힌트, 영상 위)
 export function createFeedback(elements) {
   let audio = null;
   let warningUntil = 0;
-  const lastSpokenAt = new Map(); // 안내 id → 마지막으로 말한 시각(ms)
+  let currentHint = null; // 지금 보이는 연습 모드 힌트
+  const lastSpokenAt = new Map(); // 안내 id(연습 힌트는 문구) → 마지막으로 말한 시각(ms)
 
   function setMessage(text, warning) {
     elements.message.textContent = text;
@@ -25,8 +27,23 @@ export function createFeedback(elements) {
     // 새 세션을 시작할 때 이전 안내 상태를 지운다
     reset() {
       warningUntil = 0;
+      currentHint = null;
+      elements.hint.hidden = true;
       lastSpokenAt.clear();
       window.speechSynthesis?.cancel();
+    },
+
+    // 연습 모드 힌트 (권유형, 한 번에 하나). text가 null이면 숨긴다.
+    // voice가 켜져 있으면 문구가 바뀔 때 한 번 말한다 (같은 문구는 2.5초 안에 다시 말하지 않는다)
+    hint(text, now, voice) {
+      elements.hint.hidden = text === null;
+      if (text === currentHint) return;
+      currentHint = text;
+      elements.hint.textContent = text ?? "";
+      if (!text || !voice) return;
+      if (now - (lastSpokenAt.get(text) ?? -Infinity) < VOICE_COOLDOWN_SECONDS * 1000) return;
+      lastSpokenAt.set(text, now);
+      speak([text]);
     },
 
     // 상태 문구. 경고 문구를 보여 주는 중이면 덮어쓰지 않는다

@@ -1,38 +1,55 @@
 // 트래커 화면 연결: 버튼, 카메라, 프레임 반복, 결과 표시
-import { ERROR_NAMES, EXERCISE_NAMES, MEASURE_LABELS, STATUS } from "./catalog.js";
+import { ERROR_NAMES, EXERCISE_NAMES, MODE_TEXT, STATUS } from "./catalog.js";
+import { createDevTools } from "./devtools.js";
 import { createFeedback } from "./feedback.js";
+import { MODES, pickPracticeHint } from "./modes.js";
+import { drawOverlay } from "./overlay.js";
+import { createPanel } from "./panel.js";
 import { createPoseEngine, startCamera, stopCamera } from "./pose-engine.js";
 import { buildRecord, computeAccuracy, createSession, saveRecord, sessionCount, toLocalIsoString } from "./session.js";
 
-const RECORD_SECONDS = 10; // 개발용 랜드마크 녹화 길이 (스쿼트 3~4회)
+const PARTIAL_HINT_MS = 3000; // 연습 모드에서 범위 미달 힌트를 보여 주는 시간
 
 const byId = (id) => document.getElementById(id);
 const video = byId("webcam");
 const canvas = byId("pose-canvas");
+const context = canvas.getContext("2d");
 const exerciseSelect = byId("exercise-select");
-const startButton = byId("start-button");
+const startButtons = [byId("start-record"), byId("start-practice")];
 const finishButton = byId("finish-button");
-const recordButton = byId("record-button");
 const feedback = createFeedback({
   message: byId("feedback-message"),
   panel: byId("panel"),
   count: byId("count-display"),
   accuracyText: byId("accuracy-text"),
   accuracyBar: byId("accuracy-bar"),
+  hint: byId("practice-hint"),
 });
+const panel = createPanel({
+  indicators: byId("indicators"),
+  gauge: byId("depth-gauge"),
+  track: byId("depth-track"),
+  fill: byId("depth-fill"),
+  value: byId("depth-value"),
+});
+const devTools = createDevTools(
+  { angles: byId("angles-view"), attemptLog: byId("attempt-log"), captureButton: byId("capture-button") },
+  video,
+);
 
 let engine = null;
 let session = null; // 진행 중인 세션. 없으면 null
+let mode = MODES.record; // 지금 세션의 모드 (modes.js)
 let startedAt = null; // 기록의 startedAt: 시작 버튼을 누른 시각
 let frameRequest = 0;
 let lastVideoTime = -1;
-let recording = null; // 개발용 녹화: { frames, until }
-let attemptLog = []; // 개발용: 최근 반복의 판정 값 (최신이 위)
+let partialHint = null; // 연습 모드: 방금 끝난 범위 미달 { cue, until }
 
 loadEngine();
-startButton.addEventListener("click", start);
+byId("start-record").addEventListener("click", () => start("record"));
+byId("start-practice").addEventListener("click", () => start("practice"));
 finishButton.addEventListener("click", finish);
-recordButton.addEventListener("click", startRecording);
+byId("capture-button").addEventListener("click", () => devTools.startCapture(session.stats.exercise, performance.now()));
 
 async function loadEngine() {
   feedback.status(STATUS.loading, 0);
@@ -43,44 +60,62 @@ async function loadEngine() {
     feedback.status(STATUS.loadError, 0);
     return;
   }
-  startButton.disabled = false;
+  setStartEnabled(true);
   feedback.status(STATUS.ready, 0);
 }
 
-// 시작: 카메라를 켜고 새 세션을 만든 뒤 프레임 반복을 한 번만 시작한다
-async function start() {
-  startButton.disabled = true; // 카메라를 켜는 동안 두 번 눌리지 않게 막는다
+function setStartEnabled(enabled) {
+  for (const button of startButtons) button.disabled = !enabled;
+}
+
+// 시작: 카메라를 켜고, 고른 모드로 새 세션을 만든 뒤 프레임 반복을 한 번만 시작한다
+async function start(modeName) {
+  setStartEnabled(false); // 카메라를 켜는 동안 두 번 눌리지 않게 막는다
   feedback.unlockAudio();
   try {
     await startCamera(video);
   } catch (error) {
     console.error(error);
     feedback.status(STATUS.cameraError, performance.now());
-    startButton.disabled = false;
+    setStartEnabled(true);
     return;
   }
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
   byId("stage").style.aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
   byId("result").hidden = true;
-  attemptLog = [];
-  byId("attempt-log").textContent = "";
+  mode = MODES[modeName];
+  partialHint = null;
   feedback.reset();
+  devTools.reset();
+  panel.setup(exerciseSelect.value, mode);
+  showMode();
   session = createSession(exerciseSelect.value, performance.now());
   startedAt = new Date();
   setRunning(true);
   frameRequest = requestAnimationFrame(loop);
 }
 
-// 종료: 반복과 카메라를 멈추고 결과를 보여 준다
+// 모드에 따라 숫자·배지·종료 버튼 문구를 바꾼다 (F1)
+function showMode() {
+  byId("accuracy-box").hidden = !mode.showNumbers;
+  byId("count-row").hidden = !mode.showNumbers;
+  byId("practice-badge").hidden = !mode.badge;
+  finishButton.textContent = mode.save ? MODE_TEXT.finishRecord : MODE_TEXT.finishPractice;
+}
+
+// 종료: 반복과 카메라를 멈춘다. 수행 모드는 기록을 저장하고, 연습 모드는 저장하지 않는다
 function finish() {
   cancelAnimationFrame(frameRequest);
   stopCamera(video);
+  context.clearRect(0, 0, canvas.width, canvas.height);
   setRunning(false);
-  recording = null;
+  byId("practice-badge").hidden = true;
+  feedback.hint(null, performance.now(), false);
   const { stats } = session;
   session = null;
-  showResult(stats);
+  if (mode.save) showResult(stats);
+  else showPracticeEnd();
 }
 
 // 영상에 새 프레임이 나올 때마다 한 번 분석한다
@@ -90,37 +125,31 @@ function loop() {
     const now = performance.now();
     const landmarks = engine.detect(video, now);
     engine.draw(landmarks);
-    recordFrame(landmarks, now);
+    devTools.frame(landmarks, now);
     render(session.processFrame(landmarks, video.videoWidth, video.videoHeight, now), now);
   }
   frameRequest = requestAnimationFrame(loop);
 }
 
 function render(view, now) {
+  const exercise = session.stats.exercise;
   if (view.status) feedback.status(view.status, now);
-  feedback.cues(session.stats.exercise, view.cues, now);
-  if (view.success) feedback.success();
-  feedback.progress(progressText(session.stats), computeAccuracy(session.stats));
-  byId("angles-view").textContent = view.angles ? formatAngles(view.angles) : "";
-  if (view.events.length > 0) logAttempts(view.events);
+  if (mode.practiceHints) feedback.hint(practiceHint(view, now), now, byId("practice-voice").checked);
+  else feedback.cues(exercise, view.cues, now);
+  if (view.success && mode.sounds) feedback.success();
+  if (mode.showNumbers) feedback.progress(progressText(session.stats), computeAccuracy(session.stats));
+  panel.update(view);
+  drawOverlay(context, exercise, view, mode);
+  devTools.show(view, exercise);
 }
 
-// 개발용: 반복마다 판정 결과와 그 근거 값을 최근 10개까지 보여 준다 (기준값을 조정할 때 쓴다)
-function logAttempts(events) {
-  attemptLog = [...events.map(describeAttempt).reverse(), ...attemptLog].slice(0, 10);
-  byId("attempt-log").textContent = attemptLog.join("\n");
-}
-
-// 예: "✖ 상체 과다 숙임 | 깊이 92° · 몸통-정강이 18° · 발 각도 변화 3°"
-function describeAttempt(event) {
-  const names = ERROR_NAMES[session.stats.exercise];
-  let verdict = "✔ 올바른 반복";
-  if (event.type === "partialRep") verdict = "△ 범위 미달";
-  else if (event.errors.length > 0) verdict = `✖ ${event.errors.map((key) => names[key]).join(", ")}`;
-  const values = Object.entries(event.measures ?? {})
-    .filter(([, value]) => value !== null)
-    .map(([key, value]) => `${MEASURE_LABELS[key]} ${Math.round(value)}°`);
-  return `${verdict} | ${values.join(" · ")}`;
+// 연습 모드 힌트 (F1): 주황 이상인 지표와 3초 안에 끝난 범위 미달 중 우선순위가 가장 높은 하나
+function practiceHint(view, now) {
+  const partial = view.events.find((event) => event.type === "partialRep");
+  if (partial) partialHint = { cue: partial.cue ?? "partialRep", until: now + PARTIAL_HINT_MS };
+  const activeKeys = view.indicators.filter((item) => item.stage !== "good").map((item) => item.errorKey);
+  if (partialHint && now < partialHint.until) activeKeys.push(partialHint.cue);
+  return pickPracticeHint(session.stats.exercise, activeKeys);
 }
 
 // 스쿼트·푸시업은 "전체 n회 / 올바른 n회", 플랭크는 바른 자세 유지 시간 (7.3)
@@ -129,24 +158,26 @@ function progressText(stats) {
   return `전체 ${stats.reps}회 / 올바른 ${stats.correctReps}회`;
 }
 
-function formatAngles(angles) {
-  return Object.entries(angles)
-    .map(([name, value]) => `${name} ${Math.round(value)}°`)
-    .join(" · ");
-}
-
 // 진행 중에는 종목을 바꾸거나 다시 시작할 수 없다
 function setRunning(running) {
   exerciseSelect.disabled = running;
-  startButton.disabled = running;
+  setStartEnabled(!running);
   finishButton.disabled = !running;
-  recordButton.disabled = !running;
-  recordButton.textContent = `랜드마크 ${RECORD_SECONDS}초 녹화`;
+  devTools.setRunning(running);
+}
+
+// 연습 모드 종료: 요약 없이 한 줄만 보여 준다
+function showPracticeEnd() {
+  byId("result").hidden = false;
+  byId("result-summary").textContent = MODE_TEXT.practiceEnd;
+  byId("result-status").textContent = "";
+  byId("result-details").hidden = true;
 }
 
 // 기록할 운동이 있을 때(count > 0)만 기록을 만들어 저장한다. 저장 조건은 이것 하나다 (7.6)
 async function showResult(stats) {
   byId("result").hidden = false;
+  byId("result-details").hidden = false;
   const summary = byId("result-summary");
   const status = byId("result-status");
   const json = byId("result-json");
@@ -177,35 +208,4 @@ function summarize(record) {
     .map(([key, count]) => `${names[key]} ${count}회`);
   const head = `${EXERCISE_NAMES[record.exercise]} ${record.count}${unit}`;
   return [head, `정확도 ${record.accuracy}%`, ...errors].join(" · ");
-}
-
-// 개발용: 지금부터 몇 초 동안의 랜드마크를 JSON 파일로 내려받는다 (HANDOFF 9장, tests/fixtures용)
-function startRecording() {
-  recording = { frames: [], until: performance.now() + RECORD_SECONDS * 1000 };
-  recordButton.textContent = "녹화 중...";
-}
-
-// 파일 크기를 줄이려고 판정에 쓰지 않는 z는 빼고 소수 넷째 자리까지만 남긴다 (1280px 영상에서 0.1px 차이)
-function compact(landmarks) {
-  const round = (value) => Math.round(value * 10000) / 10000;
-  return landmarks?.map(({ x, y, visibility }) => ({ x: round(x), y: round(y), visibility: round(visibility) })) ?? null;
-}
-
-function recordFrame(landmarks, now) {
-  if (!recording) return;
-  recording.frames.push({ t: now, width: video.videoWidth, height: video.videoHeight, landmarks: compact(landmarks) });
-  if (now < recording.until) return;
-  const exercise = session.stats.exercise;
-  download(`landmarks-${exercise}-${Date.now()}.json`, { exercise, frames: recording.frames });
-  recording = null;
-  recordButton.textContent = `랜드마크 ${RECORD_SECONDS}초 녹화`;
-}
-
-function download(filename, data) {
-  const url = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: "application/json" }));
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
 }
