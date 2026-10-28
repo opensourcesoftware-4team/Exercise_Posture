@@ -1,0 +1,32 @@
+[
+  {
+    "id": "221bfc31-952a-4b99-9573-3759b27a23b0",
+    "startedAt": "2026-10-28T10:48:29+09:00",
+    "exercise": "plank",
+    "view": "side",
+    "count": 83,
+    "accuracy": 97,
+    "errors": {
+      "squat": {
+        "torsoLean": 0,
+        "shinLean": 0,
+        "heelLift": 0,
+        "partialRep": 0,
+        "kneeValgus": 0
+      },
+      "pushup": {
+        "coreDrop": 0,
+        "coreHigh": 0,
+        "handForward": 0,
+        "handBackward": 0,
+        "partialRep": 0
+      },
+      "plank": {
+        "hipDrop": 0,
+        "hipHigh": 0,
+        "neckDrop": 0,
+        "neckHigh": 0
+      }
+    }
+  }
+]
