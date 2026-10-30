@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+# 기록 저장 API (기능 2) — 개인 기록과 예시 복사본은 올리지 않음
+data/records.json
+data/demo.json
+data/*.json.tmp
