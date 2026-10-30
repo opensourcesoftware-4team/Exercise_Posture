@@ -12,6 +12,10 @@ export const MAX_FRAME_GAP_SECONDS = 1; // 프레임 간격이 이보다 길면(
 // 추가 기능 F2: 기준까지 이 각도 이내로 다가가면 "주의"(주황)로 보여 준다
 export const STAGE_WARN_MARGIN = 5;
 
+// 추가 기능 F4: 몸 길이 측정. 가시성 기준은 MIN_VISIBILITY를 관절마다 적용한다
+export const MEASURE_FRAMES = 60; // 한 번에 재는 프레임 수 (30fps에서 약 2초)
+export const MEASURE_MIN_VALID = 30; // 이 중 유효 프레임이 이보다 적으면 처음부터 다시 잰다
+
 // 7.6 세션 흐름
 export const COUNTDOWN_SECONDS = 10; // 준비 카운트다운 (레거시 값)
 

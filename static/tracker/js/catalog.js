@@ -89,6 +89,13 @@ export const PRACTICE_HINTS = {
   ],
 };
 
+// 몸 길이 측정 자세 안내 (추가 기능 F4). 스쿼트는 선 자세, 푸시업은 팔을 편 시작 자세, 플랭크는 플랭크 자세에서 잰다
+export const MEASURE_TEXT = {
+  squat: "옆으로 서서 잠깐 기다려 주세요.",
+  pushup: "팔을 편 푸시업 시작 자세로 잠깐 멈춰 주세요.",
+  plank: "플랭크 자세로 잠깐 멈춰 주세요.",
+};
+
 // 모드별 화면 문구 (추가 기능 F1)
 export const MODE_TEXT = {
   finishRecord: "종료하고 저장",

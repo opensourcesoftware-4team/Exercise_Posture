@@ -1,4 +1,4 @@
-/* 추가 기능 화면 스타일: 연습 모드(F1), 지표 3단계 색(F2), 깊이 게이지(F3). 색 토큰은 tracker.css에 있다. */
+/* 추가 기능 화면 스타일: 연습 모드(F1), 지표 3단계 색(F2), 깊이 게이지(F3), 몸 길이 측정(F4). 색 토큰은 tracker.css에 있다. */
 
 /* 추가 기능 F1: 시작 버튼 두 개, 연습 배지, 연습 힌트 */
 .tracker-start {
@@ -48,6 +48,41 @@
   font-size: 1.3rem;
   font-weight: 800;
   text-align: center;
+}
+
+/* 추가 기능 F4: 몸 길이 측정 안내와 진행 막대 (영상 아래쪽, 연습 힌트와 같은 자리) */
+.tracker-measure {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.85);
+  text-align: center;
+}
+
+.tracker-measure p {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+
+.tracker-measure-track {
+  height: 10px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+#measure-bar {
+  width: 0;
+  height: 100%;
+  background: var(--stage-good);
 }
 
 /* 추가 기능 F2·F3: 지표 패널과 깊이 게이지 */

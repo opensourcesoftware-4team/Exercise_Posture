@@ -1,4 +1,5 @@
 // 트래커 화면 연결: 버튼, 카메라, 프레임 반복, 결과 표시
+import { createBodyMeasure } from "./body-measure.js";
 import { ERROR_NAMES, EXERCISE_NAMES, MODE_TEXT, STATUS } from "./catalog.js";
 import { createDevTools } from "./devtools.js";
 import { createFeedback } from "./feedback.js";
@@ -24,6 +25,9 @@ const feedback = createFeedback({
   accuracyText: byId("accuracy-text"),
   accuracyBar: byId("accuracy-bar"),
   hint: byId("practice-hint"),
+  measure: byId("measure-box"),
+  measureText: byId("measure-text"),
+  measureBar: byId("measure-bar"),
 });
 const panel = createPanel({
   indicators: byId("indicators"),
@@ -33,7 +37,12 @@ const panel = createPanel({
   value: byId("depth-value"),
 });
 const devTools = createDevTools(
-  { angles: byId("angles-view"), attemptLog: byId("attempt-log"), captureButton: byId("capture-button") },
+  {
+    angles: byId("angles-view"),
+    attemptLog: byId("attempt-log"),
+    captureButton: byId("capture-button"),
+    bodySize: byId("body-size-view"),
+  },
   video,
 );
 
@@ -44,6 +53,8 @@ let startedAt = null; // 기록의 startedAt: 시작 버튼을 누른 시각
 let frameRequest = 0;
 let lastVideoTime = -1;
 let partialHint = null; // 연습 모드: 방금 끝난 범위 미달 { cue, until }
+let bodyMeasure = null; // 몸 길이 측정기 (F4). 몸 길이를 재는 모드에서만 만든다
+let bodySize = null; // 몸 길이 측정값 (F4). 측정이 끝나기 전에는 null이고, 저장하지 않는다
 
 loadEngine();
 byId("start-record").addEventListener("click", () => start("record"));
@@ -86,6 +97,8 @@ async function start(modeName) {
   byId("result").hidden = true;
   mode = MODES[modeName];
   partialHint = null;
+  bodyMeasure = mode.measureBody ? createBodyMeasure(exerciseSelect.value) : null;
+  bodySize = null;
   feedback.reset();
   devTools.reset();
   panel.setup(exerciseSelect.value, mode);
@@ -112,6 +125,7 @@ function finish() {
   setRunning(false);
   byId("practice-badge").hidden = true;
   feedback.hint(null, performance.now(), false);
+  feedback.measure(null);
   const { stats } = session;
   session = null;
   if (mode.save) showResult(stats);
@@ -126,9 +140,21 @@ function loop() {
     const landmarks = engine.detect(video, now);
     engine.draw(landmarks);
     devTools.frame(landmarks, now);
-    render(session.processFrame(landmarks, video.videoWidth, video.videoHeight, now), now);
+    if (bodyMeasure && !bodySize && now >= session.countdownEndsAt) measureBody(landmarks, now);
+    else render(session.processFrame(landmarks, video.videoWidth, video.videoHeight, now), now);
   }
   frameRequest = requestAnimationFrame(loop);
+}
+
+// 몸 길이를 재는 프레임 (F4): 카운트다운이 끝나면 판정을 잠시 쉬고 안내와 진행 막대만 보여 준다.
+// 다 재면 다음 프레임부터 판정한다
+function measureBody(landmarks, now) {
+  const step = bodyMeasure.add(landmarks, video.videoWidth, video.videoHeight);
+  feedback.status(step.status, now);
+  feedback.measure(step.result ? null : step);
+  if (!step.result) return;
+  bodySize = step.result;
+  devTools.showBodySize(session.stats.exercise, bodySize);
 }
 
 function render(view, now) {

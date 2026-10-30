@@ -12,6 +12,7 @@ export const MODES = {
     practiceHints: false, // 오답별 교정 문구(catalog.js ERROR_CUES)를 쓴다
     save: true, // 종료하면 기록을 저장한다
     badge: false, // "연습 중" 배지
+    measureBody: false, // 카운트다운 뒤 판정 전에 몸 길이를 잰다 (F4)
   },
   // 연습: 저장하지 않고 숫자도 보이지 않는다. 음성은 체크박스로 켤 수 있다
   practice: {
@@ -22,6 +23,7 @@ export const MODES = {
     practiceHints: true, // 권유형 힌트를 한 번에 하나만 보여 준다
     save: false,
     badge: true,
+    measureBody: true,
   },
 };
 

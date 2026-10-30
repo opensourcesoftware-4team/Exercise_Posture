@@ -197,7 +197,8 @@
 
 .tracker-result pre,
 #attempt-log,
-#angles-view {
+#angles-view,
+#body-size-view {
   white-space: pre-wrap;
   word-break: break-all;
   font-size: 0.8rem;

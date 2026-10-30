@@ -1,4 +1,6 @@
-// 개발용 도구: 실시간 각도, 반복별 판정 값, 랜드마크 녹화 (HANDOFF 9장. 기준값 조정과 tests/fixtures용)
+// 개발용 도구: 실시간 각도, 반복별 판정 값, 랜드마크 녹화 (HANDOFF 9장. 기준값 조정과 tests/fixtures용),
+// 몸 길이 측정값 (추가 기능 F4)
+import { lengthDifference } from "./body-measure.js";
 import { ERROR_NAMES, MEASURE_LABELS } from "./catalog.js";
 
 const CAPTURE_SECONDS = 10; // 랜드마크 녹화 길이 (스쿼트 3~4회)
@@ -37,16 +39,36 @@ function download(filename, data) {
   URL.revokeObjectURL(url);
 }
 
-// elements: angles(실시간 각도 글자), attemptLog(판정 값 목록), captureButton(녹화 버튼)
+// 예: "shank 181px · thigh 176px · ... · facing +1 · heelOffset -24px"
+function describeBodySize(size) {
+  const lengths = Object.entries(size.lengths).map(([name, value]) => `${name} ${Math.round(value)}px`);
+  const extra = [`facing ${size.facing > 0 ? "+1" : "-1"}`];
+  if (size.heelOffset !== undefined) extra.push(`heelOffset ${Math.round(size.heelOffset)}px`);
+  return [...lengths, ...extra].join(" · ");
+}
+
+// elements: angles(실시간 각도 글자), attemptLog(판정 값 목록), captureButton(녹화 버튼), bodySize(몸 길이 측정값)
 export function createDevTools(elements, video) {
   const idleLabel = `랜드마크 ${CAPTURE_SECONDS}초 녹화`;
   let log = [];
   let capture = null; // 녹화 중이면 { exercise, frames, until }
+  let lastBodySize = null; // 직전 측정 { exercise, size }. 두 번 잰 값을 비교하려고 세션이 바뀌어도 남긴다
 
   return {
     reset() {
       log = [];
       elements.attemptLog.textContent = "";
+      elements.bodySize.textContent = "";
+    },
+
+    // 몸 길이 측정이 끝나면 한 번: 측정값(px)과, 같은 종목 직전 측정과의 가장 큰 길이 차이 (5% 이내면 재현됨)
+    showBodySize(exercise, size) {
+      let text = describeBodySize(size);
+      if (lastBodySize?.exercise === exercise) {
+        text += `\n직전 측정과 최대 차이 ${lengthDifference(size, lastBodySize.size).toFixed(1)}%`;
+      }
+      elements.bodySize.textContent = text;
+      lastBodySize = { exercise, size };
     },
 
     setRunning(running) {

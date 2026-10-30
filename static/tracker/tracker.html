@@ -23,6 +23,11 @@
         <video id="webcam" autoplay playsinline muted></video>
         <canvas id="pose-canvas"></canvas>
         <p class="tracker-hint" id="practice-hint" hidden></p>
+        <div class="tracker-measure" id="measure-box" hidden>
+          <strong>몸 길이를 재고 있어요</strong>
+          <p id="measure-text"></p>
+          <div class="tracker-measure-track"><div id="measure-bar"></div></div>
+        </div>
       </div>
 
       <div class="tracker-controls">
@@ -66,6 +71,8 @@
           <p id="angles-view"></p>
           <p>최근 반복 판정 값</p>
           <pre id="attempt-log"></pre>
+          <p>몸 길이 측정값 (연습 모드)</p>
+          <pre id="body-size-view"></pre>
           <button id="capture-button" type="button" disabled>랜드마크 10초 녹화</button>
         </details>
       </div>

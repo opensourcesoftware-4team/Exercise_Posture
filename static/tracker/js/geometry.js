@@ -43,6 +43,11 @@ function armLean(shoulder, wrist, hip) {
   return Math.atan2((wrist.x - shoulder.x) * headward, wrist.y - shoulder.y) * DEGREES_PER_RADIAN;
 }
 
+// 사람이 보는 방향: 코가 귀보다 오른쪽(+x)이면 +1, 아니면 -1. 발끝보다 코·귀가 덜 가려져서 이쪽으로 정한다.
+export function facingOf(points) {
+  return points.nose.x > points.ear.x ? 1 : -1;
+}
+
 // 점이 직선 a-b(연장선 포함)보다 아래에 있는가. 레거시 expectedLineY와 같은 방식이다.
 export function isBelowLine(point, a, b) {
   if (a.x === b.x) return false; // 수직선이면 같은 x의 y를 정할 수 없다
