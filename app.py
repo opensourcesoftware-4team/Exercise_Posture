@@ -1,4 +1,3 @@
-"""MOTION AI 게시판: 정적 화면과 JSON API를 같은 주소에서 제공한다."""
 import os
 import sqlite3
 from datetime import datetime, timezone
@@ -14,7 +13,7 @@ from storage import PostStore
 ROOT = Path(__file__).resolve().parent
 EXERCISES = {'squat', 'pushup', 'plank', 'other'}
 
-
+# Flask 앱 초기화 (정적 파일 경로, DB 경로 및 PostStore 등록)
 def create_app(config=None):
     app = Flask(__name__, static_folder=str(ROOT / 'static'), static_url_path='')
     app.config.update(
@@ -29,6 +28,8 @@ def create_app(config=None):
     def fail(message, status=400, fields=None):
         return jsonify(error={'message': message, 'fields': fields or {}}), status
 
+    # 보안 및 가드레일 모듈 
+    # CSRF 방어 및 타입 검사 
     @app.before_request
     def protect_write():
         if request.path.startswith('/api/') and request.method == 'POST':
@@ -40,6 +41,7 @@ def create_app(config=None):
             if not request.is_json:
                 return fail('JSON 형식으로 요청해 주세요.', 415)
 
+    # 보안 헤더 및 캐시 제어 
     @app.after_request
     def response_headers(response):
         response.headers['X-Content-Type-Options'] = 'nosniff'
@@ -49,6 +51,8 @@ def create_app(config=None):
             response.headers['Cache-Control'] = 'no-store'
         return response
 
+    
+    # 엔드포인트 api 라우터 
     @app.get('/')
     def index():
         return app.send_static_file('index.html')
@@ -108,6 +112,7 @@ def create_app(config=None):
             return fail('이미 사용한 요청 번호입니다. 새 등록을 시도해 주세요.', 409)
         return jsonify(post=post), 201 if created else 200
 
+    # 에러 핸들러 (전역 예외 처리)
     @app.errorhandler(sqlite3.Error)
     def database_error(error):
         app.logger.exception('게시글 DB 오류')
