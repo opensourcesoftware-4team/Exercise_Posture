@@ -1,7 +1,7 @@
 // 화면 조립 + 상태(종목·기간). 값은 모두 textContent로 넣는다.
 import { getStats, getRecords, deleteRecord } from "./api.js";
 import { drawTrend, destroyTrend } from "./charts.js";
-import { errorLabel, EXERCISE_NAMES } from "../../shared/error-labels.js";
+import { errorLabel, ERROR_ORDER, EXERCISE_NAMES } from "../../shared/error-labels.js";
 
 const state = { exercise: "squat", range: { type: "last", value: 7 } };
 const $ = (id) => document.getElementById(id);
@@ -53,8 +53,10 @@ function renderSummary(stats) {
 function renderErrors(stats) {
   const list = $("error-list");
   list.replaceChildren();
-  const totals = Object.entries(stats.errorTotals)
-    .filter(([key]) => key !== "kneeValgus" || stats.hasFrontView);   // 정면 기록이 없으면 숨김
+  // 서버 JSON은 키가 알파벳순이라 명세(4.2절) 순서로 다시 나열한다
+  const totals = ERROR_ORDER[stats.exercise]
+    .filter((key) => key !== "kneeValgus" || stats.hasFrontView)   // 정면 기록이 없으면 숨김
+    .map((key) => [key, stats.errorTotals[key] ?? 0]);
   const max = Math.max(...totals.map(([, v]) => v), 1);
   for (const [key, count] of totals) {
     const row = el("div", "db-error-row");
@@ -133,18 +135,13 @@ async function load() {
     renderSummary(stats);
     renderTable(records);
 
-    const many = records.length >= 2;                     // 1건: 요약 카드와 표만
-    $("trend-card").hidden = !many;
+    const many = records.length >= 2;                     // 1건: 요약 카드와 표만 + 추이 자리에 안내 문구
     $("error-row").hidden = !many;
-    if (many) {
-      const enough = stats.trend.length >= 2;
-      $("trend-note").hidden = enough;
-      $("trend-chart-box").hidden = !enough;
-      if (enough) drawTrend($("trend-canvas"), stats); else destroyTrend();
-      renderErrors(stats);
-    } else {
-      destroyTrend();
-    }
+    const enough = many && stats.trend.length >= 2;
+    $("trend-note").hidden = enough;
+    $("trend-chart-box").hidden = !enough;
+    if (enough) drawTrend($("trend-canvas"), stats); else destroyTrend();
+    if (many) renderErrors(stats);
   } catch (e) {
     showMessage(`데이터를 불러오지 못했습니다: ${e.message}`);
   }

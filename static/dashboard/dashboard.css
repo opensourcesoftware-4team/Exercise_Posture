@@ -22,6 +22,7 @@ body.db-page {
   overflow-x: hidden;
 }
 .db-page * { box-sizing: border-box; }
+.db-page [hidden] { display: none !important; }   /* display 지정한 클래스보다 hidden 속성이 우선하게 */
 
 /* 상단 내비게이션 */
 .db-nav {

@@ -12,4 +12,11 @@ export function errorLabel(exercise, key) {
   return ERROR_LABELS[key] ?? key;
 }
 
+// 종목별 오답 키 표시 순서 (기록 양식 4.2절, stats.py의 ERROR_ORDER와 동일)
+export const ERROR_ORDER = {
+  squat: ["torsoLean", "shinLean", "heelLift", "partialRep", "kneeValgus"],
+  pushup: ["coreDrop", "coreHigh", "handForward", "handBackward", "partialRep"],
+  plank: ["hipDrop", "hipHigh", "neckDrop", "neckHigh"],
+};
+
 export const EXERCISE_NAMES = { squat: "스쿼트", pushup: "푸시업", plank: "플랭크" };
