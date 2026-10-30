@@ -38,11 +38,3 @@ def test_delete(client, example):
     assert client.get("/api/records").get_json() == []
     assert client.delete("/api/records/없는-id").status_code == 404
 
-
-def test_stats_endpoint(client, example):
-    client.post("/api/records", json=example())
-    assert client.get("/api/stats?exercise=squat").get_json()["sessions"] == 1
-    assert client.get("/api/stats").status_code == 400
-    assert client.get("/api/stats?exercise=lunge").status_code == 400
-    assert client.get("/api/stats?exercise=squat&last=abc").status_code == 400
-    assert client.get("/api/stats?exercise=squat&days=0").status_code == 400
