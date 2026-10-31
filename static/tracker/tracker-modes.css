@@ -1,0 +1,157 @@
+/* 추가 기능 화면 스타일: 연습 모드(F1), 지표 3단계 색(F2), 깊이 게이지(F3). 색 토큰은 tracker.css에 있다. */
+
+/* 추가 기능 F1: 시작 버튼 두 개, 연습 배지, 연습 힌트 */
+.tracker-start {
+  display: flex;
+  gap: 12px;
+}
+
+.tracker-start button {
+  flex: 1;
+}
+
+.tracker-controls button.secondary {
+  background: #334155;
+}
+
+.tracker-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.tracker-badge {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 1;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.92);
+  color: #111827;
+  font-weight: 800;
+}
+
+.tracker-hint {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1;
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.85);
+  color: var(--stage-warn);
+  font-size: 1.3rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+/* 추가 기능 F2·F3: 지표 패널과 깊이 게이지 */
+.tracker-metrics {
+  display: flex;
+  gap: 16px;
+  padding: 16px 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.tracker-indicators {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.indicator {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-weight: 700;
+}
+
+.indicator strong {
+  font-size: 1.2rem;
+}
+
+.indicator[data-stage="good"] strong {
+  color: var(--stage-good);
+}
+
+.indicator[data-stage="warn"] strong {
+  color: var(--stage-warn);
+}
+
+.indicator[data-stage="bad"] strong {
+  color: var(--stage-bad);
+}
+
+.indicator[data-stage="none"] strong {
+  color: var(--stage-none);
+}
+
+.depth-gauge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 150px;
+}
+
+.depth-track {
+  position: relative;
+  width: 18px;
+  height: 200px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 9px;
+}
+
+.depth-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-radius: 9px;
+  background: var(--stage-none);
+  transition: height 0.1s linear;
+}
+
+.depth-fill[data-zone="attempt"] {
+  background: var(--stage-warn);
+}
+
+.depth-fill[data-zone="pass"] {
+  background: var(--stage-good);
+}
+
+/* 눈금: 막대를 가로지르는 선과 글자. 글자는 오른쪽, left 눈금은 왼쪽에 둔다 */
+.depth-tick {
+  position: absolute;
+  left: -4px;
+  width: 26px;
+  height: 0;
+  border-top: 2px solid rgba(255, 255, 255, 0.8);
+}
+
+.depth-tick span {
+  position: absolute;
+  top: -0.6em;
+  left: 32px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  color: var(--text-muted);
+}
+
+.depth-tick.left span {
+  left: auto;
+  right: 32px;
+}
+
+.depth-value {
+  font-weight: 800;
+}
