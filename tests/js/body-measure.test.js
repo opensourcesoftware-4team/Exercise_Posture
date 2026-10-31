@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createBodyMeasure, lengthDifference, stanceRatio } from "../../static/tracker/js/body-measure.js";
-import { MEASURE_STANCE_TEXT, MEASURE_TEXT, STATUS } from "../../static/tracker/js/catalog.js";
+import { createBodyMeasure, lengthDifference, stanceRatio, turnAngle } from "../../static/tracker/js/body-measure.js";
+import { MEASURE_STANCE_TEXT, MEASURE_TEXT, MEASURE_TURN_TEXT, STATUS } from "../../static/tracker/js/catalog.js";
 import { MEASURE_FRAMES } from "../../static/tracker/js/config.js";
 import { fakeLandmarks, fakeWorld, HEIGHT, PLANK_BODY, proneBody, squatBody, WIDTH } from "./fake-landmarks.js";
 
@@ -42,23 +42,43 @@ test("스쿼트: 선 자세를 60프레임 재면 분절 길이(px)·보는 방�
   assert.equal(result.facing, 1);
   assert.ok(Math.abs(result.heelOffset - -25) < 0.01);
   assert.ok(Math.abs(result.stance - 1.2) < 1e-9);
+  assert.ok(Math.abs(result.turn) < 1e-9);
 });
 
 test("스쿼트: 발 간격이 어깨너비보다 좁으면 재지 않고 더 벌리라고 안내한다", () => {
   const narrow = feed(createBodyMeasure("squat"), fakeLandmarks(STANDING), MEASURE_FRAMES * 2, fakeWorld(0.5));
   assert.equal(narrow.result, null);
   assert.equal(narrow.status, MEASURE_STANCE_TEXT);
-  assert.ok(Math.abs(narrow.stance - 0.5) < 1e-9);
+  assert.ok(Math.abs(narrow.placement.stance - 0.5) < 1e-9);
 
   const noWorld = feed(createBodyMeasure("squat"), fakeLandmarks(STANDING), MEASURE_FRAMES, null);
   assert.equal(noWorld.result, null);
-  assert.equal(noWorld.stance, null);
+  assert.equal(noWorld.placement, null);
 
   assert.notEqual(feed(createBodyMeasure("squat"), fakeLandmarks(STANDING), MEASURE_FRAMES, fakeWorld(1)).result, null);
 });
 
-test("발 간격 비율은 3D 좌표에서 두 발목 거리 ÷ 양 어깨 거리다", () => {
+test("스쿼트: 몸이 카메라와 비스듬하면(45°) 재지 않고, 정측면에서 15° 이내면 잰다", () => {
+  const turned = feed(createBodyMeasure("squat"), fakeLandmarks(STANDING), MEASURE_FRAMES * 2, fakeWorld(1.2, 45));
+  assert.equal(turned.result, null);
+  assert.equal(turned.status, MEASURE_TURN_TEXT);
+  assert.ok(Math.abs(turned.placement.turn - 45) < 1e-9);
+
+  const { result } = feed(createBodyMeasure("squat"), fakeLandmarks(STANDING), MEASURE_FRAMES, fakeWorld(1.2, 10));
+  assertLengths(result.lengths, STANDING_LENGTHS);
+  assert.ok(Math.abs(result.turn - 10) < 1e-9);
+});
+
+test("발 간격 비율은 3D 좌표에서 두 발목 거리 ÷ 양 어깨 거리이고, 몸이 돌아가도 같다", () => {
   assert.ok(Math.abs(stanceRatio(fakeWorld(1.5)) - 1.5) < 1e-9);
+  assert.ok(Math.abs(stanceRatio(fakeWorld(1.5, 40)) - 1.5) < 1e-9);
+});
+
+test("몸 방향은 정측면이 0°, 정면이 90°이고 좌우 어느 쪽으로 돌아도 같은 값이다", () => {
+  assert.ok(Math.abs(turnAngle(fakeWorld(1, 0))) < 1e-9);
+  assert.ok(Math.abs(turnAngle(fakeWorld(1, 30)) - 30) < 1e-9);
+  assert.ok(Math.abs(turnAngle(fakeWorld(1, -30)) - 30) < 1e-9);
+  assert.ok(Math.abs(turnAngle(fakeWorld(1, 90)) - 90) < 1e-9);
 });
 
 test("왼쪽을 보고 서도 길이는 같고 보는 방향만 -1이다", () => {
@@ -110,7 +130,8 @@ test("푸시업: 팔을 편 시작 자세에서 팔·다리·몸통·머리 길�
   assertLengths(result.lengths, { upperArm: 130, forearm: 130, leg: 300, torso: 300, head: 60 });
   assert.equal(result.facing, 1);
   assert.equal("heelOffset" in result, false);
-  assert.equal("stance" in result, false); // 발 간격은 스쿼트만 본다
+  assert.equal("stance" in result, false); // 몸 방향·발 간격은 스쿼트만 본다
+  assert.equal("turn" in result, false);
 });
 
 test("플랭크: 팔꿈치를 댄 자세에서 재고, 왼쪽을 보면 방향이 -1이다", () => {

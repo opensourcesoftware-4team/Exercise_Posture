@@ -23,14 +23,18 @@ export function fakeLandmarks(body, { nearSide = "right", near = 0.9, far = 0.3,
   return landmarks;
 }
 
-// MediaPipe 3D 추정 좌표 33개 (m, 엉덩이 중심 기준, 옆에서 찍어 좌우가 z로 벌어진다).
-// 어깨 너비는 0.4m이고 두 발목 사이는 그 stance배다. 몸 길이 측정의 발 간격 확인에 쓴다
-export function fakeWorld(stance) {
+// MediaPipe 3D 추정 좌표 33개 (m, 엉덩이 중심 기준). 몸 길이 측정의 몸 방향·발 간격 확인에 쓴다.
+// 어깨 너비 0.4m, 엉덩이 너비 0.3m, 두 발목 사이는 어깨 너비의 stance배다.
+// turn: 정측면에서 몸이 돌아간 각(°). 0°면 옆에서 찍어 좌우가 깊이(z)로만 벌어진다
+export function fakeWorld(stance, turn = 0) {
   const world = Array.from({ length: 33 }, () => ({ x: 0, y: 0, z: 0 }));
-  world[11] = { x: 0, y: -0.5, z: -0.2 };
-  world[12] = { x: 0, y: -0.5, z: 0.2 };
-  world[27] = { x: 0, y: 0.8, z: -0.2 * stance };
-  world[28] = { x: 0, y: 0.8, z: 0.2 * stance };
+  const side = (half, y) => [
+    { x: -half * Math.sin(radians(turn)), y, z: -half * Math.cos(radians(turn)) },
+    { x: half * Math.sin(radians(turn)), y, z: half * Math.cos(radians(turn)) },
+  ];
+  [world[11], world[12]] = side(0.2, -0.5);
+  [world[23], world[24]] = side(0.15, 0);
+  [world[27], world[28]] = side(0.2 * stance, 0.8);
   return world;
 }
 
