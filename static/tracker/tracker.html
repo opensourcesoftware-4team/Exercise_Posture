@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI 실시간 자세 분석</title>
+  <link rel="stylesheet" href="tracker.css">
+  <link rel="stylesheet" href="tracker-modes.css">
+</head>
+<body class="tracker-page">
+  <main class="tracker">
+    <h1>AI 실시간 자세 분석</h1>
+    <p class="tracker-guide">카메라를 몸 옆쪽에 두고, 머리부터 발끝까지 화면에 들어오게 서 주세요.</p>
+
+    <div class="tracker-layout">
+      <div class="tracker-stage" id="stage">
+        <div class="tracker-accuracy" id="accuracy-box">
+          <span>실시간 정확도</span>
+          <span id="accuracy-text">–</span>
+          <div class="tracker-accuracy-track"><div id="accuracy-bar" data-level="none"></div></div>
+        </div>
+        <div class="tracker-badge" id="practice-badge" hidden>연습 중 · 기록되지 않아요</div>
+        <video id="webcam" autoplay playsinline muted></video>
+        <canvas id="pose-canvas"></canvas>
+        <p class="tracker-hint" id="practice-hint" hidden></p>
+      </div>
+
+      <div class="tracker-controls">
+        <select id="exercise-select" aria-label="종목">
+          <option value="squat">스쿼트</option>
+          <option value="pushup">푸시업</option>
+          <option value="plank">플랭크</option>
+        </select>
+        <div class="tracker-start">
+          <button id="start-record" type="button" disabled>운동 기록하기</button>
+          <button id="start-practice" class="secondary" type="button" disabled>연습하기 (기록 없음)</button>
+        </div>
+        <label class="tracker-option"><input type="checkbox" id="practice-voice"> 연습 중 음성 안내</label>
+        <button id="finish-button" type="button" disabled>종료하고 저장</button>
+
+        <div class="tracker-panel" id="panel">
+          <div id="count-row">횟수 <strong id="count-display">–</strong></div>
+          <p id="feedback-message">준비 중...</p>
+        </div>
+
+        <div class="tracker-metrics">
+          <div class="tracker-indicators" id="indicators"></div>
+          <div class="depth-gauge" id="depth-gauge" hidden>
+            <div class="depth-track" id="depth-track"><div class="depth-fill" id="depth-fill" data-zone="idle"></div></div>
+            <span class="depth-value" id="depth-value">–</span>
+          </div>
+        </div>
+
+        <section class="tracker-result" id="result" hidden>
+          <h2>결과</h2>
+          <p id="result-summary"></p>
+          <p id="result-status"></p>
+          <details id="result-details">
+            <summary>기록 데이터 (JSON)</summary>
+            <pre id="result-json"></pre>
+          </details>
+        </section>
+
+        <details class="tracker-dev">
+          <summary>개발용 도구</summary>
+          <p id="angles-view"></p>
+          <p>최근 반복 판정 값</p>
+          <pre id="attempt-log"></pre>
+          <button id="capture-button" type="button" disabled>랜드마크 10초 녹화</button>
+        </details>
+      </div>
+    </div>
+  </main>
+  <script type="module" src="js/tracker.js"></script>
+</body>
+</html>

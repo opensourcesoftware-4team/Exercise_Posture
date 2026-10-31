@@ -1,0 +1,137 @@
+import json
+
+def get_all_errors_info(file_path):
+    with open(file_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    # 단일 세션 객체(dict)와 누적 세션 배열(list) 모두 처리
+    sessions = data if isinstance(data, list) else [data]
+    error_counts = {}
+
+    for session in sessions:
+        errors_by_exercise = session.get("errors", {})
+        for exercise, errors in errors_by_exercise.items():
+            for error_name, count in errors.items():
+                if count > 0:
+                    key = (exercise, error_name)
+                    error_counts[key] = error_counts.get(key, 0) + count
+
+    sorted_errors = sorted(error_counts.items(), key=lambda x: x[1], reverse=True)
+    return sorted_errors
+
+error_info = {
+    "squat": {
+        "torsoLean": {
+            "description": "현재 스쿼트 동작 시 상체가 앞으로 너무 많이 숙여지고 있습니다!",
+            "cause": "배와 허리에 버티는 힘이 부족하거나, 발목과 골반이 뻣뻣해서 중심을 잡으려고 상체를 앞으로 숙이게 됩니다.",
+            "solution": "내려가기 전에 숨을 크게 들이마셔 배에 힘을 단단히 주고, 시선은 정면을 보며 가슴을 펴주세요. 일어날 때는 발바닥 전체로 바닥을 수직으로 밀어내듯 일어나야 합니다.",
+            "video": "assets/videos/squat_torso_lean_guide.mp4 (또는 유튜브 링크)"
+        },
+        "shinLean": {
+            "description": "현재 스쿼트 동작 시 무릎이 발끝 앞으로 너무 많이 밀리고 있습니다!",
+            "cause": "엉덩이를 뒤로 빼면서 앉지 않고 무릎부터 먼저 굽혀서 몸무게가 앞쪽으로 쏠리기 때문입니다.",
+            "solution": "무릎을 먼저 굽히지 말고, 내 뒤에 있는 의자에 걸터앉는다는 느낌으로 엉덩이를 뒤로 먼저 빼며 앉아보세요. 무게중심을 발가락이 아닌 발바닥 가운데와 뒤꿈치에 두어야 합니다.",
+            "video": "assets/videos/squat_shin_lean_guide.mp4 (또는 유튜브 링크)"
+        },
+        "heelLift": {
+            "description": "현재 스쿼트 동작 시 발뒤꿈치가 바닥에서 들리고 있습니다!",
+            "cause": "종아리와 발목이 뻣뻣하거나 몸무게가 발 앞쪽으로 쏠려 있기 때문입니다.",
+            "solution": "운동 전에 종아리와 발목을 충분히 풀어주고, 발끝을 바깥쪽으로 살짝(15~30도) 벌려 서보세요. 앉았다 일어나는 내내 엄지발가락·새끼발가락·발뒤꿈치 세 점으로 바닥을 꾹 누르는 느낌을 유지하세요.",
+            "video": "assets/videos/squat_heel_lift_guide.mp4 (또는 유튜브 링크)"
+        },
+        "partialRep": {
+            "description": "현재 스쿼트 동작 시 충분히 깊게 앉지 못하고 있습니다!",
+            "cause": "골반과 발목이 뻣뻣하거나 허벅지 힘이 부족해서 끝까지 앉기 힘들기 때문입니다.",
+            "solution": "발을 어깨너비보다 조금 넓게 벌리고, 무릎을 발끝 방향으로 벌려 골반이 내려갈 공간을 만들어 주세요. 뒤에 낮은 의자를 두고 엉덩이가 닿을랑 말랑 할 정도(허벅지가 바닥과 수평이 될 때)까지 천천히 앉는 연습을 해보세요.",
+            "video": "assets/videos/squat_partial_rep_guide.mp4 (또는 유튜브 링크)"
+        },
+        "kneeValgus": {
+            "description": "현재 스쿼트 동작 시 무릎이 안쪽으로 모이고 있습니다!",
+            "cause": "엉덩이 옆쪽 힘이 부족해서 앉았다 일어날 때 무릎을 바깥쪽으로 버텨주지 못하기 때문입니다.",
+            "solution": "양발로 바닥을 양옆으로 찢는다는 느낌으로 힘을 주고, 앉을 때와 일어날 때 모두 무릎이 두 번째 발가락 방향을 향하도록 바깥쪽으로 계속 밀어내세요.",
+            "video": "assets/videos/squat_knee_valgus_guide.mp4 (또는 유튜브 링크)"
+        }
+    },
+    "pushup": {
+        "coreDrop": {
+            "description": "현재 푸시업 동작 시 허리와 배가 아래로 처지고 있습니다!",
+            "cause": "배와 엉덩이에 힘을 꽉 주지 못해 몸이 일직선으로 유지되지 않기 때문입니다.",
+            "solution": "배에 힘을 단단히 주고 양쪽 엉덩이를 꽉 조여 머리부터 발뒤꿈치까지 하나의 단단한 나무판자처럼 일직선을 만드세요. 버티기 힘들다면 무릎을 바닥에 대고 정확한 일자 자세부터 연습해 보세요.",
+            "video": "assets/videos/pushup_core_drop_guide.mp4 (또는 유튜브 링크)"
+        },
+        "coreHigh": {
+            "description": "현재 푸시업 동작 시 엉덩이가 위로 솟고 있습니다!",
+            "cause": "가슴과 팔의 힘이 부족해서 무의식적으로 엉덩이를 들어 올려 쉽게 버티려고 하기 때문입니다.",
+            "solution": "어깨가 손목 바로 위에 오도록 몸을 살짝 앞으로 이동시키고, 엉덩이를 내려 어깨-엉덩이-발목이 비스듬한 일직선이 되도록 맞춘 상태에서 팔을 굽히세요.",
+            "video": "assets/videos/pushup_core_high_guide.mp4 (또는 유튜브 링크)"
+        },
+        "handForward": {
+            "description": "현재 푸시업 동작 시 손을 어깨보다 너무 앞쪽에 짚고 있습니다!",
+            "cause": "시작할 때 손을 어깨 바로 아래에 두지 않아서 어깨에 무리가 가는 상태입니다.",
+            "solution": "시작 자세를 잡을 때 손을 몸 쪽으로 한 뼘 정도 당겨서, 옆에서 봤을 때 어깨 바로 아래에 손목이 수직으로 놓이도록 짚으세요.",
+            "video": "assets/videos/pushup_hand_forward_guide.mp4 (또는 유튜브 링크)"
+        },
+        "handBackward": {
+            "description": "현재 푸시업 동작 시 손을 어깨보다 너무 뒤쪽(배 쪽)에 짚고 있습니다!",
+            "cause": "손을 몸 안쪽으로 너무 당겨 짚어서 손목이 많이 꺾이고 몸이 앞으로 쏠리기 때문입니다.",
+            "solution": "손을 가슴 옆 라인(어깨 바로 아래 위치)으로 살짝 앞으로 옮겨 짚어, 내려갔을 때 팔뚝이 바닥과 수직에 가깝게 되도록 위치를 조절하세요.",
+            "video": "assets/videos/pushup_hand_backward_guide.mp4 (또는 유튜브 링크)"
+        },
+        "partialRep": {
+            "description": "현재 푸시업 동작 시 팔을 충분히 굽히지 못하고 있습니다!",
+            "cause": "가슴과 팔의 힘이 부족해서 몸을 바닥 가까이 끝까지 내리지 못하기 때문입니다.",
+            "solution": "가슴과 바닥 사이에 주먹 하나가 들어갈 정도까지 팔꿈치를 90도 가까이 충분히 굽혀 내려가세요. 팔 힘이 부족하다면 무릎을 바닥에 대거나 책상을 짚고 수행하여 끝까지 내려갔다가 올라오는 연습을 먼저 해보세요.",
+            "video": "assets/videos/pushup_partial_rep_guide.mp4 (또는 유튜브 링크)"
+        }
+    },
+    "plank": {
+        "hipDrop": {
+            "description": "현재 플랭크 동작 시 엉덩이가 아래로 처지고 있습니다!",
+            "cause": "배와 엉덩이에 힘이 풀려서 몸을 일자로 버티지 못하고 허리에 무게가 실리기 때문입니다.",
+            "solution": "배꼽을 등 쪽으로 당긴다는 느낌으로 배에 힘을 주고 엉덩이와 허벅지를 꽉 조이세요. 양 팔꿈치를 발끝 쪽으로 살짝 당기듯 바닥을 밀어내며 엉덩이를 등 높이에 맞춰 들어 올리세요.",
+            "video": "assets/videos/plank_hip_drop_guide.mp4 (또는 유튜브 링크)"
+        },
+        "hipHigh": {
+            "description": "현재 플랭크 동작 시 엉덩이가 위로 솟고 있습니다!",
+            "cause": "배에 들어가는 힘을 피하려고 엉덩이를 높이 들어 어깨와 다리 힘으로만 버티려 하기 때문입니다.",
+            "solution": "가슴을 양 팔꿈치 사이로 살짝 앞으로 보내면서 엉덩이를 천천히 내려, 뒤통수·등·엉덩이·발뒤꿈치가 평평한 일직선이 되도록 맞추고 배의 힘으로 버티세요.",
+            "video": "assets/videos/plank_hip_high_guide.mp4 (또는 유튜브 링크)"
+        },
+        "neckDrop": {
+            "description": "현재 플랭크 동작 시 고개가 아래로 푹 떨어지고 있습니다!",
+            "cause": "머리와 등을 일직선으로 유지하지 못하고 시선을 발이나 배 쪽으로 두어 목에 힘이 풀렸기 때문입니다.",
+            "solution": "시선을 발쪽이 아닌 양손(주먹) 사이의 바닥에 고정하고, 턱을 목 쪽으로 살짝 당겨 뒤통수가 등과 나란히 일직선이 되도록 머리를 들어 올리세요.",
+            "video": "assets/videos/plank_neck_drop_guide.mp4 (또는 유튜브 링크)"
+        },
+        "neckHigh": {
+            "description": "현재 플랭크 동작 시 고개를 너무 높이 들고 있습니다!",
+            "cause": "바닥을 보지 않고 앞이나 위를 쳐다봐서 목 뒤쪽과 어깨에 불필요한 힘이 들어가기 때문입니다.",
+            "solution": "정면이나 위를 올려다보지 말고 시선을 양손 사이 바닥으로 자연스럽게 내려, 뒷목이 길어진다는 느낌으로 머리와 척추를 일직선으로 유지하세요.",
+            "video": "assets/videos/plank_neck_high_guide.mp4 (또는 유튜브 링크)"
+        }
+    }
+}
+
+all_errors = get_all_errors_info('session-example.json')
+
+if all_errors:
+    for idx, ((exercise, error_name), count) in enumerate(all_errors, start=1):
+        info = error_info.get(exercise, {}).get(error_name, {
+            "description": "현재 알 수 없는 자세 오류가 발생하고 있습니다!",
+            "cause": "정확한 원인을 파악할 수 없습니다.",
+            "solution": "기본 자세 가이드를 다시 확인해 주세요.",
+            "video": "가이드 영상 없음"
+        })
+        
+        prefix = "[최다 발생 오류]" if idx == 1 else f"[추가 발생 오류 {idx - 1}]"
+        print(f"{prefix} (총 {count}회)")
+        print(f"- 발생한 오류: {info['description']}")
+        print(f"- 발생 원인: {info['cause']}")
+        print(f"- 자세 교정 방법: {info['solution']}")
+        
+        # 최다 발생 오류(1순위)인 경우에만 교정 가이드 영상 안내 출력
+        if idx == 1:
+            print(f"- 교정 가이드 영상: {info['video']}")
+        print()
+else:
+    print("모든 자세가 정확합니다. 운동을 잘하고 계십니다.")
