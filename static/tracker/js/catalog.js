@@ -97,6 +97,7 @@ export const MEASURE_TEXT = {
   plank: "플랭크 자세로 잠깐 멈춰 주세요.",
 };
 export const MEASURE_STANCE_TEXT = "발을 어깨너비보다 조금 더 벌려 주세요."; // 스쿼트 측정: 발 간격이 좁을 때
+export const MEASURE_TURN_TEXT = "몸을 카메라와 직각이 되게 정확히 옆으로 돌려 주세요."; // 스쿼트 측정: 몸이 비스듬할 때
 
 // 모드별 화면 문구 (추가 기능 F1)
 export const MODE_TEXT = {

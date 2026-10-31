@@ -16,6 +16,7 @@ export const STAGE_WARN_MARGIN = 5;
 export const MEASURE_FRAMES = 60; // 한 번에 재는 프레임 수 (30fps에서 약 2초)
 export const MEASURE_MIN_VALID = 30; // 이 중 유효 프레임이 이보다 적으면 처음부터 다시 잰다
 export const MEASURE_STANCE_MIN = 1.0; // 스쿼트: 두 발목 사이 거리가 어깨 너비의 이 배 이상일 때만 잰다 (3D 추정 좌표)
+export const MEASURE_TURN_MAX = 15; // 스쿼트: 몸이 정측면(카메라와 90°)에서 이 각도(°) 이내로 돌아가 있을 때만 잰다 (3D 추정 좌표)
 
 // 7.6 세션 흐름
 export const COUNTDOWN_SECONDS = 10; // 준비 카운트다운 (레거시 값)

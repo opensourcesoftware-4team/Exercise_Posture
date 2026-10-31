@@ -152,7 +152,7 @@ function measureBody(landmarks, world, now) {
   const step = bodyMeasure.add(landmarks, world, video.videoWidth, video.videoHeight);
   feedback.status(step.status, now);
   feedback.measure(step.result ? null : step);
-  devTools.showStance(step.stance);
+  devTools.showPlacement(step.placement);
   if (!step.result) return;
   bodySize = step.result;
   devTools.showBodySize(session.stats.exercise, bodySize);
