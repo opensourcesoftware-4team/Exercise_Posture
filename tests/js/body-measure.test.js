@@ -1,18 +1,19 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createBodyMeasure, lengthDifference } from "../../static/tracker/js/body-measure.js";
-import { MEASURE_TEXT, STATUS } from "../../static/tracker/js/catalog.js";
+import { createBodyMeasure, lengthDifference, stanceRatio } from "../../static/tracker/js/body-measure.js";
+import { MEASURE_STANCE_TEXT, MEASURE_TEXT, STATUS } from "../../static/tracker/js/catalog.js";
 import { MEASURE_FRAMES } from "../../static/tracker/js/config.js";
-import { fakeLandmarks, HEIGHT, PLANK_BODY, proneBody, squatBody, WIDTH } from "./fake-landmarks.js";
+import { fakeLandmarks, fakeWorld, HEIGHT, PLANK_BODY, proneBody, squatBody, WIDTH } from "./fake-landmarks.js";
 
 // 선 자세 (오른쪽을 본다). squatBody의 픽셀 길이: 정강이·허벅지 180, 몸통 220, 머리 50, 발 80, 뒤꿈치는 발목보다 25px 뒤
 const STANDING = squatBody(10, { torso: 10, shin: 5 });
 const STANDING_LENGTHS = { shank: 180, thigh: 180, torso: 220, head: 50, foot: 80 };
+const WIDE = fakeWorld(1.2); // 발을 어깨너비보다 조금 넓게 벌렸다
 
 // 같은 랜드마크를 count장 넣고 마지막 결과를 돌려준다
-function feed(measure, landmarks, count) {
+function feed(measure, landmarks, count, world = WIDE) {
   let step = null;
-  for (let i = 0; i < count; i += 1) step = measure.add(landmarks, WIDTH, HEIGHT);
+  for (let i = 0; i < count; i += 1) step = measure.add(landmarks, world, WIDTH, HEIGHT);
   return step;
 }
 
@@ -35,11 +36,29 @@ test("스쿼트: 선 자세를 60프레임 재면 분절 길이(px)·보는 방�
   assert.equal(before.status, MEASURE_TEXT.squat);
   assert.ok(Math.abs(before.progress - (MEASURE_FRAMES - 1) / MEASURE_FRAMES) < 1e-9);
 
-  const { result, progress } = measure.add(fakeLandmarks(STANDING), WIDTH, HEIGHT);
+  const { result, progress } = measure.add(fakeLandmarks(STANDING), WIDE, WIDTH, HEIGHT);
   assert.equal(progress, 1);
   assertLengths(result.lengths, STANDING_LENGTHS);
   assert.equal(result.facing, 1);
   assert.ok(Math.abs(result.heelOffset - -25) < 0.01);
+  assert.ok(Math.abs(result.stance - 1.2) < 1e-9);
+});
+
+test("스쿼트: 발 간격이 어깨너비보다 좁으면 재지 않고 더 벌리라고 안내한다", () => {
+  const narrow = feed(createBodyMeasure("squat"), fakeLandmarks(STANDING), MEASURE_FRAMES * 2, fakeWorld(0.5));
+  assert.equal(narrow.result, null);
+  assert.equal(narrow.status, MEASURE_STANCE_TEXT);
+  assert.ok(Math.abs(narrow.stance - 0.5) < 1e-9);
+
+  const noWorld = feed(createBodyMeasure("squat"), fakeLandmarks(STANDING), MEASURE_FRAMES, null);
+  assert.equal(noWorld.result, null);
+  assert.equal(noWorld.stance, null);
+
+  assert.notEqual(feed(createBodyMeasure("squat"), fakeLandmarks(STANDING), MEASURE_FRAMES, fakeWorld(1)).result, null);
+});
+
+test("발 간격 비율은 3D 좌표에서 두 발목 거리 ÷ 양 어깨 거리다", () => {
+  assert.ok(Math.abs(stanceRatio(fakeWorld(1.5)) - 1.5) < 1e-9);
 });
 
 test("왼쪽을 보고 서도 길이는 같고 보는 방향만 -1이다", () => {
@@ -59,7 +78,7 @@ test("한 묶음 60프레임 중 유효 프레임이 30장 미만이면 처음�
   assert.equal(restarted.result, null);
   assert.equal(restarted.progress, 0);
   assert.equal(feed(measure, visible, MEASURE_FRAMES - 1).result, null);
-  assert.notEqual(measure.add(visible, WIDTH, HEIGHT).result, null);
+  assert.notEqual(measure.add(visible, WIDE, WIDTH, HEIGHT).result, null);
 
   const enough = createBodyMeasure("squat");
   feed(enough, hidden, 30);
@@ -91,6 +110,7 @@ test("푸시업: 팔을 편 시작 자세에서 팔·다리·몸통·머리 길�
   assertLengths(result.lengths, { upperArm: 130, forearm: 130, leg: 300, torso: 300, head: 60 });
   assert.equal(result.facing, 1);
   assert.equal("heelOffset" in result, false);
+  assert.equal("stance" in result, false); // 발 간격은 스쿼트만 본다
 });
 
 test("플랭크: 팔꿈치를 댄 자세에서 재고, 왼쪽을 보면 방향이 -1이다", () => {
@@ -109,11 +129,11 @@ test("플랭크: 팔꿈치를 댄 자세에서 재고, 왼쪽을 보면 방향�
 
 test("사람이 없거나 정면이면 그 까닭을 안내하고 재지 않는다", () => {
   const measure = createBodyMeasure("squat");
-  assert.equal(measure.add(null, WIDTH, HEIGHT).status, STATUS.notVisible);
+  assert.equal(measure.add(null, null, WIDTH, HEIGHT).status, STATUS.notVisible);
   const front = fakeLandmarks(STANDING);
   front[11] = { x: 0.6, y: 0.25, z: 0, visibility: 0.9 };
   front[12] = { x: 0.4, y: 0.25, z: 0, visibility: 0.9 };
-  assert.equal(measure.add(front, WIDTH, HEIGHT).status, STATUS.notSideView);
+  assert.equal(measure.add(front, WIDE, WIDTH, HEIGHT).status, STATUS.notSideView);
 });
 
 // 테스트가 매번 같은 값을 쓰도록 씨앗으로 정해지는 의사난수 (-0.5 ~ 0.5)
@@ -145,7 +165,7 @@ test("점이 흔들리고 가끔 튀어도 두 번 잰 길이가 5% 이내로 �
   const measureOnce = (seed) => {
     const measure = createBodyMeasure("squat");
     let step = null;
-    for (const landmarks of shakyFrames(STANDING, seed, MEASURE_FRAMES)) step = measure.add(landmarks, WIDTH, HEIGHT);
+    for (const landmarks of shakyFrames(STANDING, seed, MEASURE_FRAMES)) step = measure.add(landmarks, WIDE, WIDTH, HEIGHT);
     return step.result;
   };
   const first = measureOnce(7);
