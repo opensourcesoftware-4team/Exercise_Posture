@@ -8,7 +8,7 @@ from uuid import UUID
 from flask import Flask, jsonify, request
 from werkzeug.exceptions import HTTPException
 
-from storage import PostStore
+from post_storage import PostStore
 
 ROOT = Path(__file__).resolve().parent
 EXERCISES = {'squat', 'pushup', 'plank', 'other'}

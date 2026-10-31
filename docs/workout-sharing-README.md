@@ -74,14 +74,14 @@ HTML 파일을 더블클릭해 열면 게시글 API가 연결되지 않습니다
 브라우저 community.js
    → community-api.js의 /api/posts 요청
    → app.py의 입력 검사 / 조회 처리
-   → storage.py
+   → post_storage.py
    → instance/community.sqlite3
 ```
 
 | 파일 | 역할 |
 |---|---|
 | app.py | Flask 앱 생성, 입력 검사, API, 정적 파일 제공 |
-| storage.py | SQLite 생성·저장·조회, 요청 중복 방지 |
+| post_storage.py | SQLite 생성·저장·조회, 요청 중복 방지 |
 | server.py | Waitress 서버 실행, 포트·주소 표시 |
 | wsgi.py | 클라우드 배포용 앱 진입점 |
 | static/index.html | 기존 화면 + Community 메뉴·섹션 |
@@ -140,7 +140,7 @@ HTML 파일을 더블클릭해 열면 게시글 API가 연결되지 않습니다
 - 실행: `python server.py` 또는 `waitress-serve --port=8000 wsgi:app`
 - 환경 변수: `HOST`(기본 0.0.0.0), `PORT`(기본 8000), `DATABASE_PATH`(DB 파일의 절대 경로)
 - SQLite를 유지하려면 재시작·재배포에도 남는 영구 디스크가 필요합니다.
-- 영구 디스크가 없는 환경이라면 storage.py를 관리형 DB에 맞게 교체하고 데이터를 이전해야 합니다.
+- 영구 디스크가 없는 환경이라면 post_storage.py를 관리형 DB에 맞게 교체하고 데이터를 이전해야 합니다.
 - 별도 Netlify 프런트엔드로 나누면 API 주소뿐 아니라 허용 출처·쓰기 요청 보호 정책도 맞춰야 합니다. 현재는 같은 출처만 지원합니다.
 - 무료 플랜의 사용량·휴면·데이터 보존 조건은 배포 시점에 확인합니다.
 - 공개 서비스 운영으로 넓힐 때는 인증·관리·도배 방지 정책을 추가로 검토합니다.

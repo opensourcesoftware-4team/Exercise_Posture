@@ -102,7 +102,7 @@ class PostsTest(unittest.TestCase):
             self.assertIn('community.js', response.text)
         with self.client.get('/moving2.js') as response:
             self.assertEqual(response.status_code, 200)
-        for path in ['/app.py', '/storage.py', '/instance/community.sqlite3', '/.env']:
+        for path in ['/app.py', '/post_storage.py', '/instance/community.sqlite3', '/.env']:
             self.assertEqual(self.client.get(path).status_code, 404)
         self.assertEqual(self.client.get('/api/posts').headers['Cache-Control'], 'no-store')
 
