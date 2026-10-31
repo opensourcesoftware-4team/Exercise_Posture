@@ -2,6 +2,7 @@
 // 몸 길이 측정값 (추가 기능 F4)
 import { lengthDifference } from "./body-measure.js";
 import { ERROR_NAMES, MEASURE_LABELS } from "./catalog.js";
+import { MEASURE_STANCE_MIN } from "./config.js";
 
 const CAPTURE_SECONDS = 10; // 랜드마크 녹화 길이 (스쿼트 3~4회)
 const LOG_SIZE = 10; // 반복별 판정 값을 몇 개까지 보여 줄지
@@ -44,6 +45,7 @@ function describeBodySize(size) {
   const lengths = Object.entries(size.lengths).map(([name, value]) => `${name} ${Math.round(value)}px`);
   const extra = [`facing ${size.facing > 0 ? "+1" : "-1"}`];
   if (size.heelOffset !== undefined) extra.push(`heelOffset ${Math.round(size.heelOffset)}px`);
+  if (size.stance !== undefined) extra.push(`발 간격/어깨 너비 ${size.stance.toFixed(2)}`);
   return [...lengths, ...extra].join(" · ");
 }
 
@@ -59,6 +61,12 @@ export function createDevTools(elements, video) {
       log = [];
       elements.attemptLog.textContent = "";
       elements.bodySize.textContent = "";
+    },
+
+    // 몸 길이를 재는 동안 프레임마다: 발 간격 비율 (스쿼트만. 3D 추정이 보폭을 구분하는지 카메라로 확인하려고)
+    showStance(stance) {
+      if (stance === null) return;
+      elements.angles.textContent = `발 간격/어깨 너비 ${stance.toFixed(2)} (${MEASURE_STANCE_MIN.toFixed(1)} 이상이면 잰다)`;
     },
 
     // 몸 길이 측정이 끝나면 한 번: 측정값(px)과, 같은 종목 직전 측정과의 가장 큰 길이 차이 (5% 이내면 재현됨)

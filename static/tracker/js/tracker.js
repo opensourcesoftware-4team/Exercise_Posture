@@ -137,10 +137,10 @@ function loop() {
   if (video.currentTime !== lastVideoTime) {
     lastVideoTime = video.currentTime;
     const now = performance.now();
-    const landmarks = engine.detect(video, now);
+    const { landmarks, world } = engine.detect(video, now);
     engine.draw(landmarks);
     devTools.frame(landmarks, now);
-    if (bodyMeasure && !bodySize && now >= session.countdownEndsAt) measureBody(landmarks, now);
+    if (bodyMeasure && !bodySize && now >= session.countdownEndsAt) measureBody(landmarks, world, now);
     else render(session.processFrame(landmarks, video.videoWidth, video.videoHeight, now), now);
   }
   frameRequest = requestAnimationFrame(loop);
@@ -148,10 +148,11 @@ function loop() {
 
 // 몸 길이를 재는 프레임 (F4): 카운트다운이 끝나면 판정을 잠시 쉬고 안내와 진행 막대만 보여 준다.
 // 다 재면 다음 프레임부터 판정한다
-function measureBody(landmarks, now) {
-  const step = bodyMeasure.add(landmarks, video.videoWidth, video.videoHeight);
+function measureBody(landmarks, world, now) {
+  const step = bodyMeasure.add(landmarks, world, video.videoWidth, video.videoHeight);
   feedback.status(step.status, now);
   feedback.measure(step.result ? null : step);
+  devTools.showStance(step.stance);
   if (!step.result) return;
   bodySize = step.result;
   devTools.showBodySize(session.stats.exercise, bodySize);

@@ -15,6 +15,7 @@ export const STAGE_WARN_MARGIN = 5;
 // 추가 기능 F4: 몸 길이 측정. 가시성 기준은 MIN_VISIBILITY를 관절마다 적용한다
 export const MEASURE_FRAMES = 60; // 한 번에 재는 프레임 수 (30fps에서 약 2초)
 export const MEASURE_MIN_VALID = 30; // 이 중 유효 프레임이 이보다 적으면 처음부터 다시 잰다
+export const MEASURE_STANCE_MIN = 1.0; // 스쿼트: 두 발목 사이 거리가 어깨 너비의 이 배 이상일 때만 잰다 (3D 추정 좌표)
 
 // 7.6 세션 흐름
 export const COUNTDOWN_SECONDS = 10; // 준비 카운트다운 (레거시 값)
