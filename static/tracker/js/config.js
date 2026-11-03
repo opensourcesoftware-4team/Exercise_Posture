@@ -33,6 +33,11 @@ export const REFERENCE_GLOW_ALPHA = 0.9; // 맞았을 때 밝게 보여 주는 �
 export const MATCH_HOLD_SECONDS = 1; // 반복 구간에서 지표가 모두 초록인 상태가 이만큼 이어지면 정답 뼈대를 밝게
 export const MATCH_GLOW_SECONDS = 1; // 밝게 보여 주는 시간
 
+// 추가 기능 F7: 따라 하기 (정답 뼈대 자동 재생)
+export const PLAYBACK_PERIOD_SECONDS = 4; // 1배속 반복 한 번 (내려가기 2초, 올라오기 2초)
+export const PLAYBACK_SPEEDS = [0.5, 0.75, 1]; // 배속 선택지
+export const PLAYBACK_SPEED_DEFAULT = 0.75;
+
 // 7.6 세션 흐름
 export const COUNTDOWN_SECONDS = 10; // 준비 카운트다운 (레거시 값)
 

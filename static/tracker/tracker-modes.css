@@ -1,4 +1,4 @@
-/* 추가 기능 화면 스타일: 연습 모드(F1), 지표 3단계 색(F2), 깊이 게이지(F3), 몸 길이 측정(F4). 색 토큰은 tracker.css에 있다. */
+/* 추가 기능 화면 스타일: 연습 모드(F1), 지표 3단계 색(F2), 깊이 게이지(F3), 몸 길이 측정(F4), 정답 뼈대 보기(F6·F7). 색 토큰은 tracker.css에 있다. */
 
 /* 추가 기능 F1: 시작 버튼 두 개, 연습 배지, 연습 힌트 */
 .tracker-start {
@@ -189,4 +189,50 @@
 
 .depth-value {
   font-weight: 800;
+}
+
+/* 추가 기능 F6·F7: 정답 뼈대 보기 선택(끄기·맞춰 보기·따라 하기)과 따라 하기 재생·배속 */
+.tracker-reference,
+.tracker-playback {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* 라디오 버튼을 한 줄짜리 버튼 묶음처럼 보여 준다. 고른 것은 버튼 색이다 */
+.tracker-choice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tracker-choice label {
+  position: relative;
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tracker-choice input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tracker-choice label:has(input:checked) {
+  background: var(--button);
+  border-color: var(--button);
+  color: #fff;
+}
+
+.tracker-choice label:has(input:focus-visible) {
+  outline: 2px solid var(--button-hover);
+  outline-offset: 2px;
 }

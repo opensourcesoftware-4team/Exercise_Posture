@@ -7,7 +7,9 @@ import { createMatchGlow, createReferenceFollow } from "./follow.js";
 import { MODES, pickPracticeHint } from "./modes.js";
 import { drawOverlay, drawReference } from "./overlay.js";
 import { createPanel } from "./panel.js";
+import { createPlayback, hasPlayback } from "./playback.js";
 import { createPoseEngine, startCamera, stopCamera } from "./pose-engine.js";
+import { createReferenceControls } from "./reference-controls.js";
 import { buildRecord, computeAccuracy, createSession, saveRecord, sessionCount, toLocalIsoString } from "./session.js";
 
 const PARTIAL_HINT_MS = 3000; // 연습 모드에서 범위 미달 힌트를 보여 주는 시간
@@ -19,7 +21,6 @@ const context = canvas.getContext("2d");
 const exerciseSelect = byId("exercise-select");
 const startButtons = [byId("start-record"), byId("start-practice")];
 const finishButton = byId("finish-button");
-const followToggle = byId("reference-follow");
 const feedback = createFeedback({
   message: byId("feedback-message"),
   panel: byId("panel"),
@@ -37,6 +38,13 @@ const panel = createPanel({
   track: byId("depth-track"),
   fill: byId("depth-fill"),
   value: byId("depth-value"),
+});
+const referenceControls = createReferenceControls({
+  box: byId("reference-options"),
+  playbackChoice: byId("playback-choice"),
+  playbackBox: byId("playback-controls"),
+  toggle: byId("playback-toggle"),
+  speeds: byId("playback-speeds"),
 });
 const devTools = createDevTools(
   {
@@ -59,6 +67,7 @@ let bodyMeasure = null; // 몸 길이 측정기 (F4). 몸 길이를 재는 모�
 let bodySize = null; // 몸 길이 측정값 (F4). 측정이 끝나기 전에는 null이고, 저장하지 않는다
 let follow = null; // 맞춰 보기 (F6). 정답 뼈대를 쓰는 모드에서 몸 길이를 다 잰 뒤 만든다
 let matchGlow = null; // 정답 뼈대를 밝게 보여 줄지 (F6)
+let playback = null; // 따라 하기 (F7). 재생하는 종목에서 몸 길이를 다 잰 뒤 만든다
 
 loadEngine();
 byId("start-record").addEventListener("click", () => start("record"));
@@ -104,9 +113,11 @@ async function start(modeName) {
   bodyMeasure = mode.measureBody ? createBodyMeasure(exerciseSelect.value) : null;
   bodySize = null;
   follow = null;
+  playback = null;
   feedback.reset();
   devTools.reset();
   panel.setup(exerciseSelect.value, mode);
+  referenceControls.setup(exerciseSelect.value, mode);
   showMode();
   session = createSession(exerciseSelect.value, performance.now());
   startedAt = new Date();
@@ -119,7 +130,6 @@ function showMode() {
   byId("accuracy-box").hidden = !mode.showNumbers;
   byId("count-row").hidden = !mode.showNumbers;
   byId("practice-badge").hidden = !mode.badge;
-  byId("follow-option").hidden = !mode.referencePose;
   finishButton.textContent = mode.save ? MODE_TEXT.finishRecord : MODE_TEXT.finishPractice;
 }
 
@@ -130,7 +140,7 @@ function finish() {
   context.clearRect(0, 0, canvas.width, canvas.height);
   setRunning(false);
   byId("practice-badge").hidden = true;
-  byId("follow-option").hidden = true;
+  referenceControls.hide();
   feedback.hint(null, performance.now(), false);
   feedback.measure(null);
   const { stats } = session;
@@ -173,16 +183,23 @@ function measureBody(landmarks, world, now) {
   if (mode.referencePose) {
     follow = createReferenceFollow(exercise, bodySize);
     matchGlow = createMatchGlow(exercise);
+    playback = hasPlayback(exercise) ? createPlayback(exercise, follow, referenceControls.speed(), now) : null;
+    referenceControls.attach(playback);
   }
   devTools.showBodySize(exercise, bodySize, follow?.thetaMax);
 }
 
-// 맞춰 보기 (F6): 몸 길이를 잰 뒤, 판정 중인 프레임이면 사용자의 깊이·발목에 맞춘 정답 뼈대를 그린다.
-// 버튼을 꺼도 밝게 보여 줄 시간은 계속 잰다 (다시 켰을 때 이어지도록)
+// 정답 뼈대 (F6·F7): 몸 길이를 잰 뒤, 고른 보기에 따라 그린다.
+// 맞춰 보기는 판정 중인 프레임에서 사용자의 깊이·발목을 따라가고, 따라 하기는 사용자의 마지막 자리에서 반복 동작을 재생한다.
+// 보기를 꺼도 밝게 보여 줄 시간과 따라 하기 자리는 계속 잰다 (다시 켰을 때 이어지도록)
 function showReference(view, now) {
   if (!follow) return;
   const glowing = matchGlow.update(view, now);
-  const points = followToggle.checked ? follow.pose(view) : null;
+  playback?.see(view);
+  const choice = referenceControls.view();
+  let points = null;
+  if (choice === "follow") points = follow.pose(view);
+  else if (choice === "playback") points = playback?.pose(now);
   if (points) drawReference(context, session.stats.exercise, points, glowing);
 }
 
@@ -195,7 +212,7 @@ function render(view, now) {
   if (mode.showNumbers) feedback.progress(progressText(session.stats), computeAccuracy(session.stats));
   panel.update(view);
   drawOverlay(context, exercise, view, mode);
-  devTools.show(view, exercise);
+  devTools.show(view, exercise, referenceControls.view() === "playback" ? playback?.depth(now) : undefined);
 }
 
 // 연습 모드 힌트 (F1): 주황 이상인 지표와 3초 안에 끝난 범위 미달 중 우선순위가 가장 높은 하나

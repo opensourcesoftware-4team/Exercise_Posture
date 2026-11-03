@@ -25,14 +25,17 @@ function mirrored(body) {
 export function createReferenceFollow(exercise, body) {
   const create = REFERENCES[exercise];
   const references = { [body.facing]: create(body), [-body.facing]: create(mirrored(body)) };
+
+  // 발목 ankle(px)·보는 방향 facing(±1)·깊이 depth(°)의 정답 관절 좌표(px). 깊이는 F5가 자른다 (스쿼트 0~thetaMax, 푸시업 바닥~180°)
+  const poseAt = (ankle, facing, depth) => references[facing].pose(ankle, depth);
+
   return {
     thetaMax: references[body.facing].thetaMax, // 스쿼트: 이 체형의 정답 자세가 갈 수 있는 최대 깊이 (그 밖은 undefined)
-    // view: session.processFrame 결과. 판정 중인 프레임이면 지금 보는 방향·발목·깊이에 맞춘 정답 관절 좌표(px), 아니면 null.
-    // 깊이는 F5가 자른다 (스쿼트 0~thetaMax, 푸시업 바닥~180°)
+    poseAt, // 따라 하기(F7)도 같은 정답 자세를 쓴다
+    // view: session.processFrame 결과. 판정 중인 프레임이면 지금 보는 방향·발목·깊이에 맞춘 정답 관절 좌표(px), 아니면 null
     pose(view) {
       if (!view.points) return null;
-      const reference = references[facingOf(view.points)];
-      return reference.pose(view.points.ankle, view.angles[DEPTH_ANGLE[exercise]]);
+      return poseAt(view.points.ankle, facingOf(view.points), view.angles[DEPTH_ANGLE[exercise]]);
     },
   };
 }

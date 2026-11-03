@@ -1,5 +1,5 @@
 // 개발용 도구: 실시간 각도, 반복별 판정 값, 랜드마크 녹화 (HANDOFF 9장. 기준값 조정과 tests/fixtures용),
-// 몸 길이 측정값 (추가 기능 F4)
+// 몸 길이 측정값 (추가 기능 F4), 정답 뼈대 깊이 (F6·F7)
 import { lengthDifference } from "./body-measure.js";
 import { ERROR_NAMES, MEASURE_LABELS } from "./catalog.js";
 import { MEASURE_STANCE_MIN, MEASURE_TURN_MAX } from "./config.js";
@@ -110,13 +110,15 @@ export function createDevTools(elements, video) {
       elements.captureButton.textContent = idleLabel;
     },
 
-    // 프레임마다: 실시간 각도(스쿼트 정답 뼈대가 있으면 그 깊이도)와, 이번 프레임에 끝난 반복의 판정 값
-    show(view, exercise) {
-      let text = view.angles ? formatAngles(view.angles) : "";
-      if (view.angles && thetaMax !== undefined) {
-        text += ` · 정답 깊이 ${Math.round(Math.min(view.angles.thigh, thetaMax))}° (최대 ${thetaMax}°)`;
+    // 프레임마다: 실시간 각도와 정답 뼈대의 깊이, 이번 프레임에 끝난 반복의 판정 값.
+    // playbackDepth: 따라 하기(F7) 중이면 재생 깊이(°), 아니면 undefined (스쿼트는 맞춰 보기 깊이를 보여 준다)
+    show(view, exercise, playbackDepth) {
+      const parts = view.angles ? [formatAngles(view.angles)] : [];
+      if (playbackDepth !== undefined) parts.push(`재생 깊이 ${Math.round(playbackDepth)}°`);
+      else if (view.angles && thetaMax !== undefined) {
+        parts.push(`정답 깊이 ${Math.round(Math.min(view.angles.thigh, thetaMax))}° (최대 ${thetaMax}°)`);
       }
-      elements.angles.textContent = text;
+      elements.angles.textContent = parts.join(" · ");
       if (view.events.length === 0) return;
       log = [...view.events.map((event) => describeAttempt(exercise, event)).reverse(), ...log].slice(0, LOG_SIZE);
       elements.attemptLog.textContent = log.join("\n");
