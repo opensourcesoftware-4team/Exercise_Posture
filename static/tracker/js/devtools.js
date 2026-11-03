@@ -40,11 +40,12 @@ function download(filename, data) {
   URL.revokeObjectURL(url);
 }
 
-// 예: "shank 181px · thigh 176px · ... · facing +1 · heelOffset -24px"
+// 예: "shank 181px · thigh 176px · ... · facing +1 · heelOffset -24px · heelDrop 15px"
 function describeBodySize(size) {
   const lengths = Object.entries(size.lengths).map(([name, value]) => `${name} ${Math.round(value)}px`);
   const extra = [`facing ${size.facing > 0 ? "+1" : "-1"}`];
   if (size.heelOffset !== undefined) extra.push(`heelOffset ${Math.round(size.heelOffset)}px`);
+  if (size.heelDrop !== undefined) extra.push(`heelDrop ${Math.round(size.heelDrop)}px`);
   if (size.turn !== undefined) extra.push(`몸 방향 ${Math.round(size.turn)}°`);
   if (size.stance !== undefined) extra.push(`발 간격/어깨 너비 ${size.stance.toFixed(2)}`);
   return [...lengths, ...extra].join(" · ");

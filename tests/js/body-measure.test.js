@@ -41,6 +41,7 @@ test("스쿼트: 선 자세를 60프레임 재면 분절 길이(px)·보는 방�
   assertLengths(result.lengths, STANDING_LENGTHS);
   assert.equal(result.facing, 1);
   assert.ok(Math.abs(result.heelOffset - -25) < 0.01);
+  assert.ok(Math.abs(result.heelDrop - 15) < 0.01);
   assert.ok(Math.abs(result.stance - 1.2) < 1e-9);
   assert.ok(Math.abs(result.turn) < 1e-9);
 });
@@ -86,6 +87,7 @@ test("왼쪽을 보고 서도 길이는 같고 보는 방향만 -1이다", () =>
   assertLengths(result.lengths, STANDING_LENGTHS);
   assert.equal(result.facing, -1);
   assert.ok(Math.abs(result.heelOffset - 25) < 0.01);
+  assert.ok(Math.abs(result.heelDrop - 15) < 0.01);
 });
 
 test("한 묶음 60프레임 중 유효 프레임이 30장 미만이면 처음부터 다시 잰다", () => {
@@ -130,6 +132,7 @@ test("푸시업: 팔을 편 시작 자세에서 팔·다리·몸통·머리 길�
   assertLengths(result.lengths, { upperArm: 130, forearm: 130, leg: 300, torso: 300, head: 60 });
   assert.equal(result.facing, 1);
   assert.equal("heelOffset" in result, false);
+  assert.equal("heelDrop" in result, false);
   assert.equal("stance" in result, false); // 몸 방향·발 간격은 스쿼트만 본다
   assert.equal("turn" in result, false);
 });

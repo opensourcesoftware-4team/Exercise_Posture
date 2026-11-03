@@ -91,19 +91,23 @@ function readFrame(exercise, landmarks, placement, width, height) {
   const lengths = Object.fromEntries(
     plan.segments.map((name) => [name, distance(points[SEGMENTS[name][0]], points[SEGMENTS[name][1]])]),
   );
-  const sample = { lengths, facing: facingOf(points), heelOffset: points.heel.x - points.ankle.x, placement };
+  const heel = { heelOffset: points.heel.x - points.ankle.x, heelDrop: points.heel.y - points.ankle.y };
+  const sample = { lengths, facing: facingOf(points), ...heel, placement };
   return { sample, status: MEASURE_TEXT[exercise] };
 }
 
 // 유효 프레임 값들의 중앙값. 보는 방향은 프레임 다수결이다.
-// 뒤꿈치 위치는 발을 재는 스쿼트만 둔다 (F5가 발 중앙을 정할 때 쓴다). 몸 방향·발 간격은 확인용이다
+// 뒤꿈치 위치는 발을 재는 스쿼트만 둔다 (F5가 발 중앙과 발을 그릴 때 쓴다). 몸 방향·발 간격은 확인용이다
 function summarize(samples, plan) {
   const lengths = Object.fromEntries(
     plan.segments.map((name) => [name, median(samples.map((sample) => sample.lengths[name]))]),
   );
   const facing = Math.sign(samples.reduce((sum, sample) => sum + sample.facing, 0)) || 1;
   const result = { lengths, facing };
-  if (plan.segments.includes("foot")) result.heelOffset = median(samples.map((sample) => sample.heelOffset));
+  if (plan.segments.includes("foot")) {
+    result.heelOffset = median(samples.map((sample) => sample.heelOffset));
+    result.heelDrop = median(samples.map((sample) => sample.heelDrop));
+  }
   if (plan.placement) {
     result.turn = median(samples.map((sample) => sample.placement.turn));
     result.stance = median(samples.map((sample) => sample.placement.stance));
@@ -123,7 +127,7 @@ export function createBodyMeasure(exercise) {
     // 프레임 1장을 넣는다. landmarks·world는 MediaPipe 화면 좌표와 3D 추정 좌표(사람이 없으면 null)다.
     // 반환: status(안내 문구), progress(이번 묶음 진행 0~1), result(끝났으면 측정값, 아니면 null),
     //       placement(이번 프레임의 몸 방향 turn(°)·발 간격 비율 stance, 스쿼트만. 없으면 null)
-    // 측정값: lengths(분절 이름 → px), facing(보는 방향 ±1), 스쿼트만 heelOffset(뒤꿈치 x − 발목 x, px)과
+    // 측정값: lengths(분절 이름 → px), facing(보는 방향 ±1), 스쿼트만 heelOffset·heelDrop(뒤꿈치 x·y − 발목 x·y, px)과
     //         turn·stance(잰 프레임들의 몸 방향과 발 간격 비율)
     add(landmarks, world, width, height) {
       if (result) return { status: null, progress: 1, result, placement: null };
