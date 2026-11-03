@@ -1,9 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createBodyMeasure } from "../../static/tracker/js/body-measure.js";
-import { MEASURE_FRAMES, SHIN_MAX, TRUNK_EXTRA_MAX } from "../../static/tracker/js/config.js";
-import { createSquatReference } from "../../static/tracker/js/reference-pose.js";
-import { fakeLandmarks, fakeWorld, HEIGHT, squatBody, WIDTH } from "./fake-landmarks.js";
+import { MEASURE_FRAMES, PUSHUP, SHIN_MAX, TRUNK_EXTRA_MAX } from "../../static/tracker/js/config.js";
+import { angleAt } from "../../static/tracker/js/geometry.js";
+import {
+  createPlankReference,
+  createPushupReference,
+  createSquatReference,
+} from "../../static/tracker/js/reference-pose.js";
+import { fakeLandmarks, fakeWorld, HEIGHT, proneBody, squatBody, WIDTH } from "./fake-landmarks.js";
 
 // F4 측정값 모양의 체형 3세트 (px). 표준은 fake-landmarks.js squatBody의 길이와 같다
 const SQUAT_BODIES = {
@@ -124,4 +129,82 @@ test("스쿼트: 짧은 다리·긴 다리·표준 체형의 결과가 스냅샷
     const { shin, torso } = reference.angles(40);
     assert.deepEqual({ thetaMax: reference.thetaMax, shin: round(shin), torso: round(torso) }, SQUAT_SNAPSHOT[name], name);
   }
+});
+
+// 엎드린 자세 체형 (px). fake-landmarks.js proneBody의 길이와 같다 (오른쪽이 머리)
+const PRONE_BODY = { lengths: { upperArm: 130, forearm: 130, leg: 300, torso: 300, head: 60 }, facing: 1 };
+const PRONE_ANKLE = { x: 200, y: 600 };
+const ELBOW_ANGLES = Array.from({ length: 91 }, (_, i) => 90 + i); // 90~180
+
+test("푸시업: 팔을 다 폈을 때 손목이 어깨 바로 아래 바닥에 있다", () => {
+  const pose = createPushupReference(PRONE_BODY).pose(PRONE_ANKLE, 180);
+  close(pose.wrist.x, pose.shoulder.x);
+  close(pose.wrist.y, PRONE_ANKLE.y);
+  close(pose.shoulder.y, PRONE_ANKLE.y - 260);
+});
+
+test("푸시업: 모든 팔꿈치 각에서 발목–엉덩이–어깨–귀가 일직선이고 길이는 측정값 그대로다", () => {
+  const reference = createPushupReference(PRONE_BODY);
+  const wrist = reference.pose(PRONE_ANKLE, 180).wrist;
+  for (const alpha of ELBOW_ANGLES) {
+    const pose = reference.pose(PRONE_ANKLE, alpha);
+    close(angleAt(pose.ankle, pose.hip, pose.shoulder), 180, 1e-6);
+    close(angleAt(pose.hip, pose.shoulder, pose.ear), 180, 1e-6);
+    close(distance(pose.ankle, pose.hip), 300);
+    close(distance(pose.ankle, pose.shoulder), 600);
+    close(distance(pose.shoulder, pose.ear), 60);
+    close(distance(pose.shoulder, pose.elbow), 130);
+    close(distance(pose.elbow, pose.wrist), 130);
+    close(angleAt(pose.shoulder, pose.elbow, pose.wrist), alpha, 1e-4);
+    assert.deepEqual(pose.wrist, wrist); // 손은 바닥에 고정
+  }
+});
+
+test("푸시업: 팔을 굽힐수록 어깨가 내려가고, 팔꿈치는 발 쪽으로 나간다", () => {
+  const reference = createPushupReference(PRONE_BODY);
+  const [top, middle, bottom] = [180, 130, 90].map((alpha) => reference.pose(PRONE_ANKLE, alpha));
+  assert.ok(top.shoulder.y < middle.shoulder.y && middle.shoulder.y < bottom.shoulder.y);
+  assert.ok(bottom.elbow.x < bottom.wrist.x);
+  assert.ok(bottom.elbow.y < bottom.wrist.y);
+});
+
+test("푸시업: 팔꿈치 각은 바닥 기준(90°)~180°로 자르고, 보는 방향을 바꾸면 좌우 대칭이다", () => {
+  const reference = createPushupReference(PRONE_BODY);
+  assert.deepEqual(reference.pose(PRONE_ANKLE, 60), reference.pose(PRONE_ANKLE, PUSHUP.BOTTOM_MAX));
+  assert.deepEqual(reference.pose(PRONE_ANKLE, 200), reference.pose(PRONE_ANKLE, 180));
+  const right = reference.pose(PRONE_ANKLE, 120);
+  const left = createPushupReference({ ...PRONE_BODY, facing: -1 }).pose(PRONE_ANKLE, 120);
+  for (const joint of Object.keys(right)) {
+    close(left[joint].x, 2 * PRONE_ANKLE.x - right[joint].x);
+    close(left[joint].y, right[joint].y);
+  }
+});
+
+test("푸시업: F4로 잰 측정값을 그대로 넣을 수 있다", () => {
+  const measure = createBodyMeasure("pushup");
+  let step = null;
+  for (let i = 0; i < MEASURE_FRAMES; i += 1) step = measure.add(fakeLandmarks(proneBody()), null, WIDTH, HEIGHT);
+  const pose = createPushupReference(step.result).pose(PRONE_ANKLE, 180);
+  close(pose.wrist.x, pose.shoulder.x);
+  close(distance(pose.ankle, pose.shoulder), 600, 0.01);
+});
+
+test("플랭크: 팔꿈치가 어깨 바로 아래 바닥에 있고, 아래팔은 머리 쪽 바닥에 놓인다", () => {
+  const pose = createPlankReference(PRONE_BODY).pose(PRONE_ANKLE);
+  close(pose.elbow.x, pose.shoulder.x);
+  close(pose.elbow.y, PRONE_ANKLE.y);
+  close(pose.shoulder.y, PRONE_ANKLE.y - 130);
+  close(pose.wrist.x, pose.elbow.x + 130);
+  close(pose.wrist.y, PRONE_ANKLE.y);
+});
+
+test("플랭크: 발목–엉덩이–어깨–귀가 일직선이고 길이는 측정값 그대로이며, 보는 방향을 바꾸면 좌우 대칭이다", () => {
+  const pose = createPlankReference(PRONE_BODY).pose(PRONE_ANKLE);
+  close(angleAt(pose.ankle, pose.hip, pose.shoulder), 180, 1e-6);
+  close(angleAt(pose.hip, pose.shoulder, pose.ear), 180, 1e-6);
+  close(distance(pose.ankle, pose.hip), 300);
+  close(distance(pose.ankle, pose.shoulder), 600);
+  close(distance(pose.shoulder, pose.ear), 60);
+  const left = createPlankReference({ ...PRONE_BODY, facing: -1 }).pose(PRONE_ANKLE);
+  for (const joint of Object.keys(pose)) close(left[joint].x, 2 * PRONE_ANKLE.x - pose[joint].x);
 });
