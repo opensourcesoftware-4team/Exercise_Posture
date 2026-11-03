@@ -69,9 +69,9 @@ export async function createPoseEngine(canvas) {
       const result = landmarker.detectForVideo(video, timestampMs);
       return { landmarks: result.landmarks[0] ?? null, world: result.worldLandmarks[0] ?? null };
     },
-    // 캔버스에 관절 연결선과 점을 흐린 흰색으로 그린다. 판정에 쓰는 선분의 색은 overlay.js가 위에 덧칠한다
+    // 캔버스에 관절 연결선과 점을 흐린 흰색으로 그린다. 판정에 쓰는 선분의 색은 overlay.js가 위에 덧칠한다.
+    // 캔버스는 지우지 않는다 (tracker.js가 프레임마다 지우고, 정답 뼈대를 이보다 먼저 그린다)
     draw(landmarks) {
-      context.clearRect(0, 0, canvas.width, canvas.height);
       if (!landmarks) return;
       drawing.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS, { color: "rgba(255, 255, 255, 0.5)", lineWidth: 2 });
       drawing.drawLandmarks(landmarks, { color: "rgba(255, 255, 255, 0.9)", radius: 3 });

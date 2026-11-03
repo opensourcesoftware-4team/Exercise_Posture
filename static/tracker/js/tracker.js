@@ -3,8 +3,9 @@ import { createBodyMeasure } from "./body-measure.js";
 import { ERROR_NAMES, EXERCISE_NAMES, MODE_TEXT, STATUS } from "./catalog.js";
 import { createDevTools } from "./devtools.js";
 import { createFeedback } from "./feedback.js";
+import { createMatchGlow, createReferenceFollow } from "./follow.js";
 import { MODES, pickPracticeHint } from "./modes.js";
-import { drawOverlay } from "./overlay.js";
+import { drawOverlay, drawReference } from "./overlay.js";
 import { createPanel } from "./panel.js";
 import { createPoseEngine, startCamera, stopCamera } from "./pose-engine.js";
 import { buildRecord, computeAccuracy, createSession, saveRecord, sessionCount, toLocalIsoString } from "./session.js";
@@ -18,6 +19,7 @@ const context = canvas.getContext("2d");
 const exerciseSelect = byId("exercise-select");
 const startButtons = [byId("start-record"), byId("start-practice")];
 const finishButton = byId("finish-button");
+const followToggle = byId("reference-follow");
 const feedback = createFeedback({
   message: byId("feedback-message"),
   panel: byId("panel"),
@@ -55,6 +57,8 @@ let lastVideoTime = -1;
 let partialHint = null; // 연습 모드: 방금 끝난 범위 미달 { cue, until }
 let bodyMeasure = null; // 몸 길이 측정기 (F4). 몸 길이를 재는 모드에서만 만든다
 let bodySize = null; // 몸 길이 측정값 (F4). 측정이 끝나기 전에는 null이고, 저장하지 않는다
+let follow = null; // 맞춰 보기 (F6). 정답 뼈대를 쓰는 모드에서 몸 길이를 다 잰 뒤 만든다
+let matchGlow = null; // 정답 뼈대를 밝게 보여 줄지 (F6)
 
 loadEngine();
 byId("start-record").addEventListener("click", () => start("record"));
@@ -99,6 +103,7 @@ async function start(modeName) {
   partialHint = null;
   bodyMeasure = mode.measureBody ? createBodyMeasure(exerciseSelect.value) : null;
   bodySize = null;
+  follow = null;
   feedback.reset();
   devTools.reset();
   panel.setup(exerciseSelect.value, mode);
@@ -114,6 +119,7 @@ function showMode() {
   byId("accuracy-box").hidden = !mode.showNumbers;
   byId("count-row").hidden = !mode.showNumbers;
   byId("practice-badge").hidden = !mode.badge;
+  byId("follow-option").hidden = !mode.referencePose;
   finishButton.textContent = mode.save ? MODE_TEXT.finishRecord : MODE_TEXT.finishPractice;
 }
 
@@ -124,6 +130,7 @@ function finish() {
   context.clearRect(0, 0, canvas.width, canvas.height);
   setRunning(false);
   byId("practice-badge").hidden = true;
+  byId("follow-option").hidden = true;
   feedback.hint(null, performance.now(), false);
   feedback.measure(null);
   const { stats } = session;
@@ -138,10 +145,17 @@ function loop() {
     lastVideoTime = video.currentTime;
     const now = performance.now();
     const { landmarks, world } = engine.detect(video, now);
-    engine.draw(landmarks);
     devTools.frame(landmarks, now);
-    if (bodyMeasure && !bodySize && now >= session.countdownEndsAt) measureBody(landmarks, world, now);
-    else render(session.processFrame(landmarks, video.videoWidth, video.videoHeight, now), now);
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    if (bodyMeasure && !bodySize && now >= session.countdownEndsAt) {
+      engine.draw(landmarks);
+      measureBody(landmarks, world, now);
+    } else {
+      const view = session.processFrame(landmarks, video.videoWidth, video.videoHeight, now);
+      showReference(view, now); // 정답 뼈대는 사용자 뼈대 아래에 깔리도록 먼저 그린다
+      engine.draw(landmarks);
+      render(view, now);
+    }
   }
   frameRequest = requestAnimationFrame(loop);
 }
@@ -155,7 +169,21 @@ function measureBody(landmarks, world, now) {
   devTools.showPlacement(step.placement);
   if (!step.result) return;
   bodySize = step.result;
-  devTools.showBodySize(session.stats.exercise, bodySize);
+  const exercise = session.stats.exercise;
+  if (mode.referencePose) {
+    follow = createReferenceFollow(exercise, bodySize);
+    matchGlow = createMatchGlow(exercise);
+  }
+  devTools.showBodySize(exercise, bodySize, follow?.thetaMax);
+}
+
+// 맞춰 보기 (F6): 몸 길이를 잰 뒤, 판정 중인 프레임이면 사용자의 깊이·발목에 맞춘 정답 뼈대를 그린다.
+// 버튼을 꺼도 밝게 보여 줄 시간은 계속 잰다 (다시 켰을 때 이어지도록)
+function showReference(view, now) {
+  if (!follow) return;
+  const glowing = matchGlow.update(view, now);
+  const points = followToggle.checked ? follow.pose(view) : null;
+  if (points) drawReference(context, session.stats.exercise, points, glowing);
 }
 
 function render(view, now) {

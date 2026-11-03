@@ -46,6 +46,7 @@ function describeBodySize(size) {
   const extra = [`facing ${size.facing > 0 ? "+1" : "-1"}`];
   if (size.heelOffset !== undefined) extra.push(`heelOffset ${Math.round(size.heelOffset)}px`);
   if (size.heelDrop !== undefined) extra.push(`heelDrop ${Math.round(size.heelDrop)}px`);
+  if (size.floorDrop !== undefined) extra.push(`floorDrop ${Math.round(size.floorDrop)}px`);
   if (size.turn !== undefined) extra.push(`몸 방향 ${Math.round(size.turn)}°`);
   if (size.stance !== undefined) extra.push(`발 간격/어깨 너비 ${size.stance.toFixed(2)}`);
   return [...lengths, ...extra].join(" · ");
@@ -57,10 +58,12 @@ export function createDevTools(elements, video) {
   let log = [];
   let capture = null; // 녹화 중이면 { exercise, frames, until }
   let lastBodySize = null; // 직전 측정 { exercise, size }. 두 번 잰 값을 비교하려고 세션이 바뀌어도 남긴다
+  let thetaMax; // 스쿼트 정답 자세의 최대 깊이 (F6). 몸 길이를 재기 전이거나 스쿼트가 아니면 undefined
 
   return {
     reset() {
       log = [];
+      thetaMax = undefined;
       elements.attemptLog.textContent = "";
       elements.bodySize.textContent = "";
     },
@@ -73,9 +76,12 @@ export function createDevTools(elements, video) {
         `발 간격/어깨 너비 ${placement.stance.toFixed(2)} (${MEASURE_STANCE_MIN.toFixed(1)} 이상이면 잰다)`;
     },
 
-    // 몸 길이 측정이 끝나면 한 번: 측정값(px)과, 같은 종목 직전 측정과의 가장 큰 길이 차이 (5% 이내면 재현됨)
-    showBodySize(exercise, size) {
+    // 몸 길이 측정이 끝나면 한 번: 측정값(px)과, 같은 종목 직전 측정과의 가장 큰 길이 차이 (5% 이내면 재현됨).
+    // maxDepth: 스쿼트 정답 자세의 최대 깊이 thetaMax (F6, 정답 뼈대를 쓰지 않으면 undefined)
+    showBodySize(exercise, size, maxDepth) {
+      thetaMax = maxDepth;
       let text = describeBodySize(size);
+      if (thetaMax !== undefined) text += ` · 정답 최대 깊이 ${thetaMax}°`;
       if (lastBodySize?.exercise === exercise) {
         text += `\n직전 측정과 최대 차이 ${lengthDifference(size, lastBodySize.size).toFixed(1)}%`;
       }
@@ -104,9 +110,13 @@ export function createDevTools(elements, video) {
       elements.captureButton.textContent = idleLabel;
     },
 
-    // 프레임마다: 실시간 각도와, 이번 프레임에 끝난 반복의 판정 값
+    // 프레임마다: 실시간 각도(스쿼트 정답 뼈대가 있으면 그 깊이도)와, 이번 프레임에 끝난 반복의 판정 값
     show(view, exercise) {
-      elements.angles.textContent = view.angles ? formatAngles(view.angles) : "";
+      let text = view.angles ? formatAngles(view.angles) : "";
+      if (view.angles && thetaMax !== undefined) {
+        text += ` · 정답 깊이 ${Math.round(Math.min(view.angles.thigh, thetaMax))}° (최대 ${thetaMax}°)`;
+      }
+      elements.angles.textContent = text;
       if (view.events.length === 0) return;
       log = [...view.events.map((event) => describeAttempt(exercise, event)).reverse(), ...log].slice(0, LOG_SIZE);
       elements.attemptLog.textContent = log.join("\n");

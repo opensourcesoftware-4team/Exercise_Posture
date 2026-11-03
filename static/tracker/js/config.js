@@ -27,6 +27,12 @@ export const MASS_HAT = 0.678;
 export const MASS_THIGH = 0.2;
 export const MASS_SHANK = 0.093;
 
+// 추가 기능 F6: 정답 뼈대 맞춰 보기
+export const REFERENCE_ALPHA = 0.45; // 정답 뼈대 불투명도
+export const REFERENCE_GLOW_ALPHA = 0.9; // 맞았을 때 밝게 보여 주는 불투명도 (팀 설정값)
+export const MATCH_HOLD_SECONDS = 1; // 반복 구간에서 지표가 모두 초록인 상태가 이만큼 이어지면 정답 뼈대를 밝게
+export const MATCH_GLOW_SECONDS = 1; // 밝게 보여 주는 시간
+
 // 7.6 세션 흐름
 export const COUNTDOWN_SECONDS = 10; // 준비 카운트다운 (레거시 값)
 

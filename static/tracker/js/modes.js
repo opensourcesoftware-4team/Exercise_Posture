@@ -13,6 +13,7 @@ export const MODES = {
     save: true, // 종료하면 기록을 저장한다
     badge: false, // "연습 중" 배지
     measureBody: false, // 카운트다운 뒤 판정 전에 몸 길이를 잰다 (F4)
+    referencePose: false, // 몸 길이를 잰 뒤 정답 뼈대를 겹쳐 보여 주고 "맞춰 보기" 버튼을 둔다 (F6)
   },
   // 연습: 저장하지 않고 숫자도 보이지 않는다. 음성은 체크박스로 켤 수 있다
   practice: {
@@ -24,6 +25,7 @@ export const MODES = {
     save: false,
     badge: true,
     measureBody: true,
+    referencePose: true,
   },
 };
 
