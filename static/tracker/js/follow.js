@@ -1,6 +1,6 @@
 // 정답 뼈대 맞춰 보기 (추가 기능 F6). 매 프레임 사용자의 깊이와 발목에 맞춘 체형 맞춤 정답 관절 좌표(F5)를 만들고,
 // 바른 자세가 이어지면 정답 뼈대를 잠깐 밝게 보여 줄지 정한다. DOM을 쓰지 않아 Node 테스트를 할 수 있다.
-import { MATCH_GLOW_SECONDS, MATCH_HOLD_SECONDS, PUSHUP, SQUAT } from "./config.js";
+import { MATCH_GLOW_SECONDS, MATCH_HOLD_SECONDS, PUSHUP, SHIN_MAX, SQUAT } from "./config.js";
 import { facingOf } from "./geometry.js";
 import { createPlankReference, createPushupReference, createSquatReference } from "./reference-pose.js";
 
@@ -24,13 +24,22 @@ function mirrored(body) {
 // 맞춰 보기를 만든다. body: F4 측정값. 몸 길이를 다 잰 뒤 한 번 만든다
 export function createReferenceFollow(exercise, body) {
   const create = REFERENCES[exercise];
-  const references = { [body.facing]: create(body), [-body.facing]: create(mirrored(body)) };
+  // 보는 방향별 F5 계산기. shinMax: 스쿼트 정강이 상한 (푸시업·플랭크 계산기는 쓰지 않는다)
+  const build = (shinMax) => ({ [body.facing]: create(body, shinMax), [-body.facing]: create(mirrored(body), shinMax) });
+  let references = build(SHIN_MAX);
 
   // 발목 ankle(px)·보는 방향 facing(±1)·깊이 depth(°)의 정답 관절 좌표(px). 깊이는 F5가 자른다 (스쿼트 0~thetaMax, 푸시업 바닥~180°)
   const poseAt = (ankle, facing, depth) => references[facing].pose(ankle, depth);
 
   return {
-    thetaMax: references[body.facing].thetaMax, // 스쿼트: 이 체형의 정답 자세가 갈 수 있는 최대 깊이 (그 밖은 undefined)
+    // 스쿼트: 이 체형의 정답 자세가 갈 수 있는 최대 깊이 (그 밖은 undefined). 정강이 상한을 바꾸면 따라 바뀐다
+    get thetaMax() {
+      return references[body.facing].thetaMax;
+    },
+    // 스쿼트 정강이 상한(°)을 바꿔 정답 자세를 다시 만든다 (F9 발목 상한 개인화). null이면 SHIN_MAX로 돌린다
+    setShinMax(shinMax) {
+      references = build(shinMax ?? SHIN_MAX);
+    },
     poseAt, // 따라 하기(F7)도 같은 정답 자세를 쓴다
     // view: session.processFrame 결과. 판정 중인 프레임이면 지금 보는 방향·발목·깊이에 맞춘 정답 관절 좌표(px), 아니면 null
     pose(view) {

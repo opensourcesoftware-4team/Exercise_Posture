@@ -35,8 +35,9 @@ function bisect(f, low, high) {
 
 // 스쿼트 정답 자세 계산기 (명세 6.1). body: F4 측정값 { lengths, facing, heelOffset, heelDrop }
 // 무게중심이 발 중앙 위에 오도록 정강이·상체 기울기를 정한다. 상체는 정강이와 나란한 것이 기본이고,
-// 정강이가 SHIN_MAX에 걸리면 상체만 TRUNK_EXTRA_MAX까지 더 숙인다. 그래도 균형이 안 맞는 깊이는 이 체형에 무리다.
-export function createSquatReference(body) {
+// 정강이가 shinMax에 걸리면 상체만 TRUNK_EXTRA_MAX까지 더 숙인다. 그래도 균형이 안 맞는 깊이는 이 체형에 무리다.
+// shinMax: 정강이 기울기 상한(°). 기본은 SHIN_MAX이고, F9가 이 세션의 발목 범위에 맞춰 낮춘 값을 넘긴다
+export function createSquatReference(body, shinMax = SHIN_MAX) {
   const { shank, thigh, torso, head, foot } = body.lengths;
   const heel = { x: body.facing * body.heelOffset, y: body.heelDrop }; // 기준 좌표의 뒤꿈치 (발목 기준)
   const footCenter = heel.x + foot / 2; // 무게중심이 이 x에 오면 균형이 맞는다
@@ -62,13 +63,13 @@ export function createSquatReference(body) {
   function solve(thighAngle) {
     // 기울이지 않아도 무게중심이 발 중앙 앞에 있으면 똑바로 선다 (뒤로 기울이지는 않는다)
     if (balance(0, thighAngle, 0) >= 0) return { shin: 0, torso: 0 };
-    if (balance(SHIN_MAX, thighAngle, SHIN_MAX) >= 0) {
-      const shin = bisect((value) => balance(value, thighAngle, value), 0, SHIN_MAX);
+    if (balance(shinMax, thighAngle, shinMax) >= 0) {
+      const shin = bisect((value) => balance(value, thighAngle, value), 0, shinMax);
       return { shin, torso: shin };
     }
-    const leanMax = SHIN_MAX + TRUNK_EXTRA_MAX;
-    if (balance(SHIN_MAX, thighAngle, leanMax) < 0) return null;
-    return { shin: SHIN_MAX, torso: bisect((value) => balance(SHIN_MAX, thighAngle, value), SHIN_MAX, leanMax) };
+    const leanMax = shinMax + TRUNK_EXTRA_MAX;
+    if (balance(shinMax, thighAngle, leanMax) < 0) return null;
+    return { shin: shinMax, torso: bisect((value) => balance(shinMax, thighAngle, value), shinMax, leanMax) };
   }
 
   // 무리 없이 갈 수 있는 최대 깊이 (명세 6.1 풀이 순서 3): DEPTH_TARGET에서 1°씩 줄여 처음 균형이 맞는 깊이
@@ -78,7 +79,7 @@ export function createSquatReference(body) {
   // 깊이를 0~thetaMax로 자른 뒤의 기울기 (°): thigh(허벅지-수직 각), shin(정강이), torso(상체)
   function angles(theta) {
     const thighAngle = clamp(theta, 0, thetaMax);
-    const lean = solve(thighAngle) ?? { shin: SHIN_MAX, torso: SHIN_MAX + TRUNK_EXTRA_MAX }; // thetaMax가 0인 체형
+    const lean = solve(thighAngle) ?? { shin: shinMax, torso: shinMax + TRUNK_EXTRA_MAX }; // thetaMax가 0인 체형
     return { thigh: thighAngle, ...lean };
   }
 

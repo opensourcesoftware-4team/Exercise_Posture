@@ -1,4 +1,5 @@
 // 트래커 화면 연결: 버튼, 카메라, 프레임 반복, 결과 표시
+import { createAnkleLimit } from "./ankle-limit.js";
 import { createBodyMeasure } from "./body-measure.js";
 import { ERROR_NAMES, EXERCISE_NAMES, MODE_TEXT, STATUS } from "./catalog.js";
 import { createDevTools } from "./devtools.js";
@@ -46,6 +47,7 @@ const referenceControls = createReferenceControls({
   playbackBox: byId("playback-controls"),
   toggle: byId("playback-toggle"),
   speeds: byId("playback-speeds"),
+  ankleNote: byId("ankle-note"),
 });
 const devTools = createDevTools(
   {
@@ -53,6 +55,7 @@ const devTools = createDevTools(
     attemptLog: byId("attempt-log"),
     captureButton: byId("capture-button"),
     bodySize: byId("body-size-view"),
+    ankleLimit: byId("ankle-limit-view"),
   },
   video,
 );
@@ -69,6 +72,7 @@ let bodySize = null; // 몸 길이 측정값 (F4). 측정이 끝나기 전에는
 let follow = null; // 맞춰 보기 (F6). 정답 뼈대를 쓰는 모드에서 몸 길이를 다 잰 뒤 만든다
 let matchGlow = null; // 정답 뼈대를 밝게 보여 줄지 (F6)
 let playback = null; // 따라 하기 (F7). 재생하는 종목에서 몸 길이를 다 잰 뒤 만든다
+let ankleLimit = null; // 발목 상한 개인화 (F9). 스쿼트 연습에서 몸 길이를 다 잰 뒤 만든다
 
 loadEngine();
 byId("start-record").addEventListener("click", () => start("record"));
@@ -115,6 +119,7 @@ async function start(modeName) {
   bodySize = null;
   follow = null;
   playback = null;
+  ankleLimit = null;
   feedback.reset();
   devTools.reset();
   panel.setup(exerciseSelect.value, mode);
@@ -187,9 +192,18 @@ function measureBody(landmarks, world, now) {
     follow = createReferenceFollow(exercise, bodySize);
     matchGlow = createMatchGlow(exercise);
     playback = hasPlayback(exercise) ? createPlayback(exercise, follow, referenceControls.speed(), now) : null;
+    ankleLimit = exercise === "squat" ? createAnkleLimit() : null; // 정강이 상한은 스쿼트에만 있다
     referenceControls.attach(playback);
   }
   devTools.showBodySize(exercise, bodySize, follow?.thetaMax);
+}
+
+// 발목 상한 개인화 (F9): 반복 시도가 끝날 때마다 이 세션의 정강이 상한으로 정답 자세를 다시 만들고,
+// 상한을 낮췄으면 "오늘 발목 범위에 맞춘 정답 자세예요"를 보여 준다. 따라 하기도 같은 정답 자세라 함께 바뀐다
+function applyAnkleLimit() {
+  follow.setShinMax(ankleLimit.limit);
+  referenceControls.showAnkleNote(ankleLimit.limit !== null);
+  devTools.showAnkleLimit(ankleLimit.limit, ankleLimit.summary, follow.thetaMax);
 }
 
 // 정답 뼈대 (F6·F7): 몸 길이를 잰 뒤, 고른 보기에 따라 그린다.
@@ -197,6 +211,7 @@ function measureBody(landmarks, world, now) {
 // 보기를 꺼도 밝게 보여 줄 시간과 따라 하기 자리는 계속 잰다 (다시 켰을 때 이어지도록)
 function showReference(view, now) {
   if (!follow) return;
+  if (ankleLimit?.update(view)) applyAnkleLimit();
   const glowing = matchGlow.update(view, now);
   playback?.see(view);
   const choice = referenceControls.view();

@@ -43,6 +43,10 @@ export const MANNEQUIN_WIDTHS = { torso: 0.22, thigh: 0.18, limb: 0.14 }; // lim
 export const MANNEQUIN_HEAD_RATIO = 0.7;
 export const USER_MANNEQUIN_ALPHA = 0.75; // 내 뼈대를 마네킹으로 그릴 때 불투명도. 영상이 비쳐 보이게 (팀 설정값)
 
+// 추가 기능 F9: 발목 상한 개인화 (스쿼트 연습). 뒤꿈치가 붙은 기준은 판정과 같은 SQUAT.HEEL_LIFT_LIMIT다
+export const ANKLE_PERCENTILE = 0.95; // 뒤꿈치를 붙이고 앉은 프레임의 정강이 기울기 중 상위 5% 값을 이 세션의 정강이 상한으로 쓴다
+export const ANKLE_MIN_ATTEMPTS = 3; // 반복 시도(범위 미달 포함)가 이만큼 끝난 뒤부터 적용한다 (팀 설정값)
+
 // 7.6 세션 흐름
 export const COUNTDOWN_SECONDS = 10; // 준비 카운트다운 (레거시 값)
 
