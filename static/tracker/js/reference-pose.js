@@ -1,7 +1,7 @@
 // 체형 맞춤 정답 자세 계산기 (추가 기능 F5). F4에서 잰 몸 길이로, 깊이마다 그 사람에게 맞는 정답 관절 좌표를 만든다.
 // 카메라와 DOM을 쓰지 않는 순수 함수다. 좌표는 픽셀이고 y는 아래로 갈수록 커진다.
 // 계산은 "발목이 원점이고 사람이 +x 쪽을 보는" 기준 좌표에서 하고, 마지막에 보는 방향과 발목 위치로 옮긴다.
-import { DEPTH_TARGET, MASS_HAT, MASS_SHANK, MASS_THIGH, SHIN_MAX, TRUNK_EXTRA_MAX } from "./config.js";
+import { DEPTH_TARGET, MASS_HAT, MASS_SHANK, MASS_THIGH, PUSHUP, SHIN_MAX, TRUNK_EXTRA_MAX } from "./config.js";
 
 const RADIANS_PER_DEGREE = Math.PI / 180;
 const BISECTION_STEPS = 20; // 이분 탐색 횟수 (30° 범위를 0.00003°까지 좁힌다)
@@ -92,6 +92,71 @@ export function createSquatReference(body) {
       points.ear = step(points.shoulder, head, lean);
       points.heel = heel;
       points.toe = { x: heel.x + foot, y: heel.y }; // 발은 바닥에 평평하게 둔다
+      return toScreen(ankle, body.facing, points);
+    },
+  };
+}
+
+// 두 원(중심 a 반지름 ra, 중심 b 반지름 rb)의 교점 두 개. 원이 닿지 않으면 가장 가까운 점 하나를 두 번 돌려준다
+function circleIntersections(a, ra, b, rb) {
+  const [dx, dy] = [b.x - a.x, b.y - a.y];
+  const gap = Math.hypot(dx, dy);
+  const along = (ra * ra - rb * rb + gap * gap) / (2 * gap); // a에서 두 교점의 가운데까지
+  const across = Math.sqrt(Math.max(0, ra * ra - along * along)); // 가운데에서 각 교점까지
+  const base = { x: a.x + (along * dx) / gap, y: a.y + (along * dy) / gap };
+  return [
+    { x: base.x - (across * dy) / gap, y: base.y + (across * dx) / gap },
+    { x: base.x + (across * dy) / gap, y: base.y - (across * dx) / gap },
+  ];
+}
+
+// 엎드린 자세의 몸 선: 발목→어깨 일직선 위에서 엉덩이는 발목에서 leg만큼, 귀는 어깨에서 head만큼 간 점
+function bodyLine(shoulder, leg, head) {
+  const length = Math.hypot(shoulder.x, shoulder.y);
+  const along = (distance) => ({ x: (shoulder.x * distance) / length, y: (shoulder.y * distance) / length });
+  const beyond = along(head);
+  return { hip: along(leg), ear: { x: shoulder.x + beyond.x, y: shoulder.y + beyond.y } };
+}
+
+// 푸시업 정답 자세 계산기 (명세 6.2). body: F4 측정값 { lengths, facing }
+// 발목을 고정점으로 둔다(F4의 leg가 엉덩이–발목 길이라서). 발목과 손이 같은 바닥 높이에 있다고 본다.
+// 손목은 팔을 다 폈을 때 어깨 바로 아래 바닥에 고정하고, 팔꿈치 각에 따라 몸 선이 발목을 축으로 내려간다.
+export function createPushupReference(body) {
+  const { upperArm, forearm, leg, torso, head } = body.lengths;
+  const length = leg + torso; // 발목–어깨 (몸이 일직선)
+  const arm = upperArm + forearm;
+  const wrist = { x: Math.sqrt(Math.max(0, length * length - arm * arm)), y: 0 };
+
+  return {
+    // 발목 ankle(px)에 맞춘 팔꿈치 각 elbowAngle(°)의 정답 관절 좌표. 각은 PUSHUP.BOTTOM_MAX(바닥)~180으로 자른다
+    pose(ankle, elbowAngle) {
+      const alpha = clamp(elbowAngle, PUSHUP.BOTTOM_MAX, 180) * RADIANS_PER_DEGREE;
+      const reach = Math.sqrt(upperArm ** 2 + forearm ** 2 - 2 * upperArm * forearm * Math.cos(alpha)); // 손목–어깨
+      const shoulder = circleIntersections(ORIGIN, length, wrist, reach).reduce((a, b) => (a.y < b.y ? a : b)); // 위쪽
+      // 팔꿈치는 손목·어깨에서 각각 아래팔·위팔 길이인 점 중 발 쪽(뒤)이다
+      const elbow = circleIntersections(wrist, forearm, shoulder, upperArm).reduce((a, b) => (a.x < b.x ? a : b));
+      return toScreen(ankle, body.facing, { ankle: ORIGIN, ...bodyLine(shoulder, leg, head), shoulder, elbow, wrist });
+    },
+  };
+}
+
+// 플랭크 정답 자세 계산기 (명세 6.3, 정지 자세 하나). body: F4 측정값 { lengths, facing }
+// 팔꿈치를 어깨 바로 아래 바닥에 대고 아래팔은 머리 쪽으로 둔다. 몸은 발목–어깨 일직선이다.
+export function createPlankReference(body) {
+  const { upperArm, forearm, leg, torso, head } = body.lengths;
+  const length = leg + torso;
+  const shoulder = { x: Math.sqrt(Math.max(0, length * length - upperArm * upperArm)), y: -upperArm };
+  const points = {
+    ankle: ORIGIN,
+    ...bodyLine(shoulder, leg, head),
+    shoulder,
+    elbow: { x: shoulder.x, y: 0 },
+    wrist: { x: shoulder.x + forearm, y: 0 },
+  };
+
+  return {
+    // 발목 ankle(px)에 맞춘 정답 관절 좌표. 깊이가 없어 다른 종목과 같은 모양으로 부를 수 있게 두 번째 값은 쓰지 않는다
+    pose(ankle) {
       return toScreen(ankle, body.facing, points);
     },
   };
