@@ -131,8 +131,8 @@ test("스쿼트: 짧은 다리·긴 다리·표준 체형의 결과가 스냅샷
   }
 });
 
-// 엎드린 자세 체형 (px). fake-landmarks.js proneBody의 길이와 같다 (오른쪽이 머리)
-const PRONE_BODY = { lengths: { upperArm: 130, forearm: 130, leg: 300, torso: 300, head: 60 }, facing: 1 };
+// 엎드린 자세 체형 (px). fake-landmarks.js proneBody의 길이와 같다 (오른쪽이 머리). 손과 발목이 같은 높이다
+const PRONE_BODY = { lengths: { upperArm: 130, forearm: 130, leg: 300, torso: 300, head: 60 }, facing: 1, floorDrop: 0 };
 const PRONE_ANKLE = { x: 200, y: 600 };
 const ELBOW_ANGLES = Array.from({ length: 91 }, (_, i) => 90 + i); // 90~180
 
@@ -189,6 +189,28 @@ test("푸시업: F4로 잰 측정값을 그대로 넣을 수 있다", () => {
   close(distance(pose.ankle, pose.shoulder), 600, 0.01);
 });
 
+test("푸시업: 손은 발목보다 floorDrop만큼 아래 바닥을 짚고, 바른 시작 자세면 사용자 관절과 겹친다", () => {
+  const raised = createPushupReference({ ...PRONE_BODY, floorDrop: 20 });
+  for (const alpha of ELBOW_ANGLES) {
+    const pose = raised.pose(PRONE_ANKLE, alpha);
+    close(pose.wrist.y, PRONE_ANKLE.y + 20);
+    close(distance(pose.ankle, pose.shoulder), 600);
+    close(angleAt(pose.shoulder, pose.elbow, pose.wrist), alpha, 1e-4);
+  }
+  close(raised.pose(PRONE_ANKLE, 180).wrist.x, raised.pose(PRONE_ANKLE, 180).shoulder.x);
+
+  // proneBody()는 손목이 어깨 바로 아래인 바른 시작 자세다. F4로 잰 값으로 사용자 발목에 맞추면 손목·어깨가 겹친다
+  const user = proneBody();
+  const px = (joint) => ({ x: user[joint].x * WIDTH, y: user[joint].y * HEIGHT });
+  const measure = createBodyMeasure("pushup");
+  let step = null;
+  for (let i = 0; i < MEASURE_FRAMES; i += 1) step = measure.add(fakeLandmarks(user), null, WIDTH, HEIGHT);
+  const pose = createPushupReference(step.result).pose(px("ankle"), 180);
+  for (const joint of ["wrist", "shoulder", "elbow", "hip", "ear"]) {
+    assert.ok(distance(pose[joint], px(joint)) < 0.01, `${joint} ${distance(pose[joint], px(joint))}px`);
+  }
+});
+
 test("플랭크: 팔꿈치가 어깨 바로 아래 바닥에 있고, 아래팔은 머리 쪽 바닥에 놓인다", () => {
   const pose = createPlankReference(PRONE_BODY).pose(PRONE_ANKLE);
   close(pose.elbow.x, pose.shoulder.x);
@@ -207,4 +229,14 @@ test("플랭크: 발목–엉덩이–어깨–귀가 일직선이고 길이는 
   close(distance(pose.shoulder, pose.ear), 60);
   const left = createPlankReference({ ...PRONE_BODY, facing: -1 }).pose(PRONE_ANKLE);
   for (const joint of Object.keys(pose)) close(left[joint].x, 2 * PRONE_ANKLE.x - pose[joint].x);
+});
+
+test("플랭크: 팔꿈치·손목은 발목보다 floorDrop만큼 아래 바닥에 있고, 어깨는 그 위로 위팔 길이다", () => {
+  const pose = createPlankReference({ ...PRONE_BODY, floorDrop: 40 }).pose(PRONE_ANKLE);
+  close(pose.elbow.y, PRONE_ANKLE.y + 40);
+  close(pose.wrist.y, PRONE_ANKLE.y + 40);
+  close(pose.elbow.x, pose.shoulder.x);
+  close(distance(pose.shoulder, pose.elbow), 130);
+  close(distance(pose.ankle, pose.shoulder), 600);
+  close(angleAt(pose.ankle, pose.hip, pose.shoulder), 180, 1e-6);
 });

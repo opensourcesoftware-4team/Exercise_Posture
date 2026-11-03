@@ -29,6 +29,7 @@ const SEGMENTS = {
 // 종목마다 재는 분절과 측정 자세. 측정 자세가 아닌 프레임은 재지 않는다.
 // placement: 3D 추정 좌표로 몸 방향과 발 간격을 확인하는 종목. 스쿼트는 카메라와 정확히 90°로 서고(몸이 돌아가면
 // 머리·발 길이가 달라진다), 실제로 앉을 때의 보폭에서 재야(보폭에 따라 정강이·발 길이가 달라진다) 앉은 자세와 맞는다
+// floor: 엎드린 자세에서 바닥을 짚는 관절. 발목은 발끝으로 들려 있어서 이 관절과 높이가 다르다 (F5가 손을 그 높이에 둔다)
 const PLANS = {
   squat: {
     segments: ["shank", "thigh", "torso", "head", "foot"],
@@ -40,11 +41,13 @@ const PLANS = {
     // 팔을 편 시작 자세: 엎드려 손목이 어깨보다 아래에 있고 팔꿈치가 펴져 있다
     inPose: (angles, points) =>
       angles.bodyLevel <= LYING_MAX_ANGLE && points.wrist.y > points.shoulder.y && angles.elbow >= PUSHUP.TOP_MIN,
+    floor: "wrist",
   },
   plank: {
     segments: ["upperArm", "forearm", "leg", "torso", "head"],
     // 플랭크 자세: 엎드려 팔꿈치가 어깨보다 아래에 있다 (판정의 진입 조건과 같다)
     inPose: (angles, points) => angles.bodyLevel <= LYING_MAX_ANGLE && points.elbow.y > points.shoulder.y,
+    floor: "elbow",
   },
 };
 
@@ -92,12 +95,13 @@ function readFrame(exercise, landmarks, placement, width, height) {
     plan.segments.map((name) => [name, distance(points[SEGMENTS[name][0]], points[SEGMENTS[name][1]])]),
   );
   const heel = { heelOffset: points.heel.x - points.ankle.x, heelDrop: points.heel.y - points.ankle.y };
-  const sample = { lengths, facing: facingOf(points), ...heel, placement };
+  const floorDrop = plan.floor ? points[plan.floor].y - points.ankle.y : null;
+  const sample = { lengths, facing: facingOf(points), ...heel, floorDrop, placement };
   return { sample, status: MEASURE_TEXT[exercise] };
 }
 
 // 유효 프레임 값들의 중앙값. 보는 방향은 프레임 다수결이다.
-// 뒤꿈치 위치는 발을 재는 스쿼트만 둔다 (F5가 발 중앙과 발을 그릴 때 쓴다). 몸 방향·발 간격은 확인용이다
+// 뒤꿈치 위치는 발을 재는 스쿼트만, 바닥 높이 차는 엎드린 종목만 둔다 (F5가 발·손을 그릴 때 쓴다). 몸 방향·발 간격은 확인용이다
 function summarize(samples, plan) {
   const lengths = Object.fromEntries(
     plan.segments.map((name) => [name, median(samples.map((sample) => sample.lengths[name]))]),
@@ -108,6 +112,7 @@ function summarize(samples, plan) {
     result.heelOffset = median(samples.map((sample) => sample.heelOffset));
     result.heelDrop = median(samples.map((sample) => sample.heelDrop));
   }
+  if (plan.floor) result.floorDrop = median(samples.map((sample) => sample.floorDrop));
   if (plan.placement) {
     result.turn = median(samples.map((sample) => sample.placement.turn));
     result.stance = median(samples.map((sample) => sample.placement.stance));
@@ -128,7 +133,7 @@ export function createBodyMeasure(exercise) {
     // 반환: status(안내 문구), progress(이번 묶음 진행 0~1), result(끝났으면 측정값, 아니면 null),
     //       placement(이번 프레임의 몸 방향 turn(°)·발 간격 비율 stance, 스쿼트만. 없으면 null)
     // 측정값: lengths(분절 이름 → px), facing(보는 방향 ±1), 스쿼트만 heelOffset·heelDrop(뒤꿈치 x·y − 발목 x·y, px)과
-    //         turn·stance(잰 프레임들의 몸 방향과 발 간격 비율)
+    //         turn·stance(잰 프레임들의 몸 방향과 발 간격 비율), 푸시업·플랭크만 floorDrop(바닥을 짚은 손목·팔꿈치 y − 발목 y, px)
     add(landmarks, world, width, height) {
       if (result) return { status: null, progress: 1, result, placement: null };
       const placement = PLANS[exercise].placement && world ? placementOf(world) : null;

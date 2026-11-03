@@ -135,6 +135,15 @@ test("푸시업: 팔을 편 시작 자세에서 팔·다리·몸통·머리 길�
   assert.equal("heelDrop" in result, false);
   assert.equal("stance" in result, false); // 몸 방향·발 간격은 스쿼트만 본다
   assert.equal("turn" in result, false);
+  // proneBody: 손목 y 600, 발목 y 580 (발끝으로 서서 발목이 바닥보다 들려 있다)
+  assert.ok(Math.abs(result.floorDrop - 20) < 0.01);
+});
+
+test("바닥 높이 차는 엎드린 종목만 잰다: 푸시업은 손목, 플랭크는 팔꿈치 y − 발목 y", () => {
+  const squat = feed(createBodyMeasure("squat"), fakeLandmarks(STANDING), MEASURE_FRAMES).result;
+  assert.equal("floorDrop" in squat, false);
+  const plank = feed(createBodyMeasure("plank"), fakeLandmarks(PLANK_BODY), MEASURE_FRAMES).result;
+  assert.ok(Math.abs(plank.floorDrop - (PLANK_BODY.elbow.y - PLANK_BODY.ankle.y) * HEIGHT) < 0.01);
 });
 
 test("플랭크: 팔꿈치를 댄 자세에서 재고, 왼쪽을 보면 방향이 -1이다", () => {

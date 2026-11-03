@@ -118,14 +118,14 @@ function bodyLine(shoulder, leg, head) {
   return { hip: along(leg), ear: { x: shoulder.x + beyond.x, y: shoulder.y + beyond.y } };
 }
 
-// 푸시업 정답 자세 계산기 (명세 6.2). body: F4 측정값 { lengths, facing }
-// 발목을 고정점으로 둔다(F4의 leg가 엉덩이–발목 길이라서). 발목과 손이 같은 바닥 높이에 있다고 본다.
+// 푸시업 정답 자세 계산기 (명세 6.2). body: F4 측정값 { lengths, facing, floorDrop }
+// 발목을 고정점으로 둔다(F4의 leg가 엉덩이–발목 길이라서). 발끝으로 서면 발목이 들리므로 손은 발목보다 floorDrop만큼 아래 바닥을 짚는다.
 // 손목은 팔을 다 폈을 때 어깨 바로 아래 바닥에 고정하고, 팔꿈치 각에 따라 몸 선이 발목을 축으로 내려간다.
 export function createPushupReference(body) {
   const { upperArm, forearm, leg, torso, head } = body.lengths;
   const length = leg + torso; // 발목–어깨 (몸이 일직선)
   const arm = upperArm + forearm;
-  const wrist = { x: Math.sqrt(Math.max(0, length * length - arm * arm)), y: 0 };
+  const wrist = { x: Math.sqrt(Math.max(0, length * length - (arm - body.floorDrop) ** 2)), y: body.floorDrop };
 
   return {
     // 발목 ankle(px)에 맞춘 팔꿈치 각 elbowAngle(°)의 정답 관절 좌표. 각은 PUSHUP.BOTTOM_MAX(바닥)~180으로 자른다
@@ -140,18 +140,19 @@ export function createPushupReference(body) {
   };
 }
 
-// 플랭크 정답 자세 계산기 (명세 6.3, 정지 자세 하나). body: F4 측정값 { lengths, facing }
-// 팔꿈치를 어깨 바로 아래 바닥에 대고 아래팔은 머리 쪽으로 둔다. 몸은 발목–어깨 일직선이다.
+// 플랭크 정답 자세 계산기 (명세 6.3, 정지 자세 하나). body: F4 측정값 { lengths, facing, floorDrop }
+// 팔꿈치를 어깨 바로 아래 바닥(발목보다 floorDrop 아래)에 대고 아래팔은 머리 쪽으로 둔다. 몸은 발목–어깨 일직선이다.
 export function createPlankReference(body) {
   const { upperArm, forearm, leg, torso, head } = body.lengths;
   const length = leg + torso;
-  const shoulder = { x: Math.sqrt(Math.max(0, length * length - upperArm * upperArm)), y: -upperArm };
+  const floor = body.floorDrop;
+  const shoulder = { x: Math.sqrt(Math.max(0, length * length - (upperArm - floor) ** 2)), y: floor - upperArm };
   const points = {
     ankle: ORIGIN,
     ...bodyLine(shoulder, leg, head),
     shoulder,
-    elbow: { x: shoulder.x, y: 0 },
-    wrist: { x: shoulder.x + forearm, y: 0 },
+    elbow: { x: shoulder.x, y: floor },
+    wrist: { x: shoulder.x + forearm, y: floor },
   };
 
   return {
