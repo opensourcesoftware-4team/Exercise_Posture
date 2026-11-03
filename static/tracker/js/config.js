@@ -38,6 +38,11 @@ export const PLAYBACK_PERIOD_SECONDS = 4; // 1배속 반복 한 번 (내려가�
 export const PLAYBACK_SPEEDS = [0.5, 0.75, 1]; // 배속 선택지
 export const PLAYBACK_SPEED_DEFAULT = 0.75;
 
+// 추가 기능 F8: 마네킹 렌더링. 막대 굵기는 그 뼈대의 몸통(엉덩이–어깨) 길이 대비, 머리 반지름은 머리(어깨–귀) 길이 대비
+export const MANNEQUIN_WIDTHS = { torso: 0.22, thigh: 0.18, limb: 0.14 }; // limb: 정강이·팔 (발도 이 굵기로 그린다)
+export const MANNEQUIN_HEAD_RATIO = 0.7;
+export const USER_MANNEQUIN_ALPHA = 0.75; // 내 뼈대를 마네킹으로 그릴 때 불투명도. 영상이 비쳐 보이게 (팀 설정값)
+
 // 7.6 세션 흐름
 export const COUNTDOWN_SECONDS = 10; // 준비 카운트다운 (레거시 값)
 

@@ -21,6 +21,7 @@ const context = canvas.getContext("2d");
 const exerciseSelect = byId("exercise-select");
 const startButtons = [byId("start-record"), byId("start-practice")];
 const finishButton = byId("finish-button");
+const userMannequin = byId("user-mannequin");
 const feedback = createFeedback({
   message: byId("feedback-message"),
   panel: byId("panel"),
@@ -162,9 +163,11 @@ function loop() {
       measureBody(landmarks, world, now);
     } else {
       const view = session.processFrame(landmarks, video.videoWidth, video.videoHeight, now);
+      // 내 뼈대를 마네킹으로 (F8): 판정 중인 프레임만 마네킹으로 그리고, 그 밖에는 선 뼈대를 그린다
+      const mannequin = userMannequin.checked && view.points !== null;
       showReference(view, now); // 정답 뼈대는 사용자 뼈대 아래에 깔리도록 먼저 그린다
-      engine.draw(landmarks);
-      render(view, now);
+      if (!mannequin) engine.draw(landmarks);
+      render(view, now, mannequin);
     }
   }
   frameRequest = requestAnimationFrame(loop);
@@ -200,10 +203,11 @@ function showReference(view, now) {
   let points = null;
   if (choice === "follow") points = follow.pose(view);
   else if (choice === "playback") points = playback?.pose(now);
-  if (points) drawReference(context, session.stats.exercise, points, glowing);
+  if (points) drawReference(context, points, glowing);
 }
 
-function render(view, now) {
+// mannequin: 사용자 뼈대를 마네킹으로 그린다 (F8)
+function render(view, now, mannequin) {
   const exercise = session.stats.exercise;
   if (view.status) feedback.status(view.status, now);
   if (mode.practiceHints) feedback.hint(practiceHint(view, now), now, byId("practice-voice").checked);
@@ -211,7 +215,7 @@ function render(view, now) {
   if (view.success && mode.sounds) feedback.success();
   if (mode.showNumbers) feedback.progress(progressText(session.stats), computeAccuracy(session.stats));
   panel.update(view);
-  drawOverlay(context, exercise, view, mode);
+  drawOverlay(context, exercise, view, mode, mannequin);
   devTools.show(view, exercise, referenceControls.view() === "playback" ? playback?.depth(now) : undefined);
 }
 
