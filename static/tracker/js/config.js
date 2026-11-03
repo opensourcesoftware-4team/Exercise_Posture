@@ -18,6 +18,15 @@ export const MEASURE_MIN_VALID = 30; // 이 중 유효 프레임이 이보다 �
 export const MEASURE_STANCE_MIN = 1.0; // 스쿼트: 두 발목 사이 거리가 어깨 너비의 이 배 이상일 때만 잰다 (3D 추정 좌표)
 export const MEASURE_TURN_MAX = 15; // 스쿼트: 몸이 정측면(카메라와 90°)에서 이 각도(°) 이내로 돌아가 있을 때만 잰다 (3D 추정 좌표)
 
+// 추가 기능 F5: 체형 맞춤 정답 자세 (스쿼트). 푸시업 정답 자세는 PUSHUP.BOTTOM_MAX까지 내려간다
+export const DEPTH_TARGET = 90; // 정답 동작이 보여 주는 최대 허벅지-수직 각 (허벅지 수평)
+export const SHIN_MAX = 30; // 정답 자세의 정강이 기울기 상한 (팀 설정값)
+export const TRUNK_EXTRA_MAX = 10; // 정강이 상한에 걸렸을 때 상체를 정강이보다 더 숙일 수 있는 한도
+// 무게중심 계산용 분절 질량비 (Winter): 머리·팔·몸통 / 허벅지 양쪽 / 정강이 양쪽. 발은 바닥에 있어 뺀다
+export const MASS_HAT = 0.678;
+export const MASS_THIGH = 0.2;
+export const MASS_SHANK = 0.093;
+
 // 7.6 세션 흐름
 export const COUNTDOWN_SECONDS = 10; // 준비 카운트다운 (레거시 값)
 

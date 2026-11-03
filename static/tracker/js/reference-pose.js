@@ -1,0 +1,98 @@
+// 체형 맞춤 정답 자세 계산기 (추가 기능 F5). F4에서 잰 몸 길이로, 깊이마다 그 사람에게 맞는 정답 관절 좌표를 만든다.
+// 카메라와 DOM을 쓰지 않는 순수 함수다. 좌표는 픽셀이고 y는 아래로 갈수록 커진다.
+// 계산은 "발목이 원점이고 사람이 +x 쪽을 보는" 기준 좌표에서 하고, 마지막에 보는 방향과 발목 위치로 옮긴다.
+import { DEPTH_TARGET, MASS_HAT, MASS_SHANK, MASS_THIGH, SHIN_MAX, TRUNK_EXTRA_MAX } from "./config.js";
+
+const RADIANS_PER_DEGREE = Math.PI / 180;
+const BISECTION_STEPS = 20; // 이분 탐색 횟수 (30° 범위를 0.00003°까지 좁힌다)
+const ORIGIN = { x: 0, y: 0 };
+
+const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
+
+// from에서 수직 위를 기준으로 앞(+x)쪽으로 degrees만큼 기운 방향으로 length만큼 간 점. 음수 각은 뒤쪽이다
+function step(from, length, degrees) {
+  const radians = degrees * RADIANS_PER_DEGREE;
+  return { x: from.x + length * Math.sin(radians), y: from.y - length * Math.cos(radians) };
+}
+
+// 기준 좌표의 점들을 화면 좌표로 옮긴다. facing이 -1이면 발목을 축으로 좌우를 뒤집는다
+function toScreen(anchor, facing, points) {
+  return Object.fromEntries(
+    Object.entries(points).map(([name, point]) => [name, { x: anchor.x + facing * point.x, y: anchor.y + point.y }]),
+  );
+}
+
+// 증가 함수 f가 [low, high]에서 0이 되는 값 (f(low) < 0 ≤ f(high)일 때)
+function bisect(f, low, high) {
+  let [from, to] = [low, high];
+  for (let i = 0; i < BISECTION_STEPS; i += 1) {
+    const middle = (from + to) / 2;
+    if (f(middle) < 0) from = middle;
+    else to = middle;
+  }
+  return (from + to) / 2;
+}
+
+// 스쿼트 정답 자세 계산기 (명세 6.1). body: F4 측정값 { lengths, facing, heelOffset, heelDrop }
+// 무게중심이 발 중앙 위에 오도록 정강이·상체 기울기를 정한다. 상체는 정강이와 나란한 것이 기본이고,
+// 정강이가 SHIN_MAX에 걸리면 상체만 TRUNK_EXTRA_MAX까지 더 숙인다. 그래도 균형이 안 맞는 깊이는 이 체형에 무리다.
+export function createSquatReference(body) {
+  const { shank, thigh, torso, head, foot } = body.lengths;
+  const heel = { x: body.facing * body.heelOffset, y: body.heelDrop }; // 기준 좌표의 뒤꿈치 (발목 기준)
+  const footCenter = heel.x + foot / 2; // 무게중심이 이 x에 오면 균형이 맞는다
+
+  // 정강이 기울기 shin, 허벅지-수직 각 thigh(엉덩이는 무릎 뒤로 빠진다), 상체 기울기 lean(°)으로 쌓은 관절
+  function joints(shin, thighAngle, lean) {
+    const knee = step(ORIGIN, shank, shin);
+    const hip = step(knee, thigh, -thighAngle);
+    const shoulder = step(hip, torso, lean);
+    return { ankle: ORIGIN, knee, hip, shoulder };
+  }
+
+  // 무게중심 x − 발 중앙 x. 분절 무게중심은 양 끝의 가운데로 본다. 몸이 앞으로 기울수록 커진다
+  function balance(shin, thighAngle, lean) {
+    const { ankle, knee, hip, shoulder } = joints(shin, thighAngle, lean);
+    const middle = (a, b) => (a.x + b.x) / 2;
+    const weighted =
+      MASS_SHANK * middle(ankle, knee) + MASS_THIGH * middle(knee, hip) + MASS_HAT * middle(hip, shoulder);
+    return weighted / (MASS_SHANK + MASS_THIGH + MASS_HAT) - footCenter;
+  }
+
+  // 깊이 thighAngle에서 균형이 맞는 { shin, torso } 기울기 (명세 6.1 풀이 순서 1·2). 균형을 못 맞추면 null
+  function solve(thighAngle) {
+    // 기울이지 않아도 무게중심이 발 중앙 앞에 있으면 똑바로 선다 (뒤로 기울이지는 않는다)
+    if (balance(0, thighAngle, 0) >= 0) return { shin: 0, torso: 0 };
+    if (balance(SHIN_MAX, thighAngle, SHIN_MAX) >= 0) {
+      const shin = bisect((value) => balance(value, thighAngle, value), 0, SHIN_MAX);
+      return { shin, torso: shin };
+    }
+    const leanMax = SHIN_MAX + TRUNK_EXTRA_MAX;
+    if (balance(SHIN_MAX, thighAngle, leanMax) < 0) return null;
+    return { shin: SHIN_MAX, torso: bisect((value) => balance(SHIN_MAX, thighAngle, value), SHIN_MAX, leanMax) };
+  }
+
+  // 무리 없이 갈 수 있는 최대 깊이 (명세 6.1 풀이 순서 3): DEPTH_TARGET에서 1°씩 줄여 처음 균형이 맞는 깊이
+  let thetaMax = DEPTH_TARGET;
+  while (thetaMax > 0 && solve(thetaMax) === null) thetaMax -= 1;
+
+  // 깊이를 0~thetaMax로 자른 뒤의 기울기 (°): thigh(허벅지-수직 각), shin(정강이), torso(상체)
+  function angles(theta) {
+    const thighAngle = clamp(theta, 0, thetaMax);
+    const lean = solve(thighAngle) ?? { shin: SHIN_MAX, torso: SHIN_MAX + TRUNK_EXTRA_MAX }; // thetaMax가 0인 체형
+    return { thigh: thighAngle, ...lean };
+  }
+
+  return {
+    thetaMax,
+    angles,
+    // 발목 ankle(px)에 맞춘 깊이 theta(허벅지-수직 각, °)의 정답 관절 좌표. theta는 0~thetaMax로 자른다
+    pose(ankle, theta) {
+      const { thigh: thighAngle, shin, torso: lean } = angles(theta);
+      const points = joints(shin, thighAngle, lean);
+      points.ear = step(points.shoulder, head, lean);
+      points.heel = heel;
+      points.toe = { x: heel.x + foot, y: heel.y }; // 발은 바닥에 평평하게 둔다
+      return toScreen(ankle, body.facing, points);
+    },
+  };
+}
