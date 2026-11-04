@@ -284,10 +284,23 @@ async function showResult(stats) {
   status.textContent = "저장하는 중...";
   try {
     await saveRecord(record);
-    status.textContent = "기록을 저장했어요.";
+    status.replaceChildren(
+      "기록을 저장했어요. ",
+      pageLink("/dashboard/", "대시보드에서 보기"),
+      " · ",
+      pageLink(`/guide/?exercise=${record.exercise}`, "자세 가이드 보기"),
+    );
   } catch (error) {
     status.textContent = `서버에 저장하지 못했어요. (${error.message})`;
   }
+}
+
+// 다른 기능 화면으로 가는 링크 (MVP 통합: 저장한 기록은 대시보드, 오답 교정은 운동 가이드)
+function pageLink(href, text) {
+  const link = document.createElement("a");
+  link.href = href;
+  link.textContent = text;
+  return link;
 }
 
 // 예: "스쿼트 12회 · 정확도 71% · 상체 과다 숙임 1회 · 범위 미달 2회"
