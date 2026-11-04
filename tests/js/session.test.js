@@ -110,6 +110,7 @@ test("프레임이 1초 넘게 끊기면(탭 전환 등) 그 시간은 세지 �
 test("카운트다운 동안은 측정하지 않고 남은 초를 안내한다", () => {
   const session = createSession("plank", 0, 10);
   const body = fakeLandmarks(PLANK_BODY);
+  assert.equal(session.countdownEndsAt, 10000);
   assert.equal(session.processFrame(body, WIDTH, HEIGHT, 2500).status, STATUS.countdown(8));
   play(session, body, 50, 3000);
   assert.equal(session.stats.goodSeconds, 0);

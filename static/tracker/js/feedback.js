@@ -5,7 +5,7 @@ import { VOICE_COOLDOWN_SECONDS } from "./config.js";
 const WARNING_HOLD_MS = 3000; // 경고 문구를 최소한 보여 주는 시간 (레거시 값)
 
 // elements: message(문구), panel(경고 색이 바뀌는 상자), count(횟수), accuracyText, accuracyBar,
-//           hint(연습 모드 힌트, 영상 위)
+//           hint(연습 모드 힌트, 영상 위), measure·measureText·measureBar(몸 길이 측정 상자, 영상 위)
 export function createFeedback(elements) {
   let audio = null;
   let warningUntil = 0;
@@ -29,6 +29,7 @@ export function createFeedback(elements) {
       warningUntil = 0;
       currentHint = null;
       elements.hint.hidden = true;
+      elements.measure.hidden = true;
       lastSpokenAt.clear();
       window.speechSynthesis?.cancel();
     },
@@ -44,6 +45,14 @@ export function createFeedback(elements) {
       if (now - (lastSpokenAt.get(text) ?? -Infinity) < VOICE_COOLDOWN_SECONDS * 1000) return;
       lastSpokenAt.set(text, now);
       speak([text]);
+    },
+
+    // 몸 길이 측정 안내와 진행 막대 (추가 기능 F4). step은 body-measure.js add()의 결과이고, null이면 숨긴다
+    measure(step) {
+      elements.measure.hidden = step === null;
+      if (step === null) return;
+      elements.measureText.textContent = step.status;
+      elements.measureBar.style.width = `${Math.round(step.progress * 100)}%`;
     },
 
     // 상태 문구. 경고 문구를 보여 주는 중이면 덮어쓰지 않는다

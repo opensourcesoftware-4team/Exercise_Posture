@@ -63,14 +63,15 @@ export async function createPoseEngine(canvas) {
   const drawing = new DrawingUtils(context);
 
   return {
-    // 영상 프레임 1장에서 사람 1명의 랜드마크 33개를 찾는다. 사람이 없으면 null
+    // 영상 프레임 1장에서 사람 1명의 랜드마크 33개를 찾는다.
+    // landmarks: 화면 좌표(0~1), world: 엉덩이 중심 기준 3D 추정 좌표(m). 사람이 없으면 둘 다 null
     detect(video, timestampMs) {
       const result = landmarker.detectForVideo(video, timestampMs);
-      return result.landmarks[0] ?? null;
+      return { landmarks: result.landmarks[0] ?? null, world: result.worldLandmarks[0] ?? null };
     },
-    // 캔버스에 관절 연결선과 점을 흐린 흰색으로 그린다. 판정에 쓰는 선분의 색은 overlay.js가 위에 덧칠한다
+    // 캔버스에 관절 연결선과 점을 흐린 흰색으로 그린다. 판정에 쓰는 선분의 색은 overlay.js가 위에 덧칠한다.
+    // 캔버스는 지우지 않는다 (tracker.js가 프레임마다 지우고, 정답 뼈대를 이보다 먼저 그린다)
     draw(landmarks) {
-      context.clearRect(0, 0, canvas.width, canvas.height);
       if (!landmarks) return;
       drawing.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS, { color: "rgba(255, 255, 255, 0.5)", lineWidth: 2 });
       drawing.drawLandmarks(landmarks, { color: "rgba(255, 255, 255, 0.9)", radius: 3 });

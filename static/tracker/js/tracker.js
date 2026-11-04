@@ -1,11 +1,16 @@
 // 트래커 화면 연결: 버튼, 카메라, 프레임 반복, 결과 표시
+import { createAnkleLimit } from "./ankle-limit.js";
+import { createBodyMeasure } from "./body-measure.js";
 import { ERROR_NAMES, EXERCISE_NAMES, MODE_TEXT, STATUS } from "./catalog.js";
 import { createDevTools } from "./devtools.js";
 import { createFeedback } from "./feedback.js";
+import { createMatchGlow, createReferenceFollow } from "./follow.js";
 import { MODES, pickPracticeHint } from "./modes.js";
-import { drawOverlay } from "./overlay.js";
+import { drawOverlay, drawReference } from "./overlay.js";
 import { createPanel } from "./panel.js";
+import { createPlayback, hasPlayback } from "./playback.js";
 import { createPoseEngine, startCamera, stopCamera } from "./pose-engine.js";
+import { createReferenceControls } from "./reference-controls.js";
 import { buildRecord, computeAccuracy, createSession, saveRecord, sessionCount, toLocalIsoString } from "./session.js";
 
 const PARTIAL_HINT_MS = 3000; // 연습 모드에서 범위 미달 힌트를 보여 주는 시간
@@ -17,6 +22,7 @@ const context = canvas.getContext("2d");
 const exerciseSelect = byId("exercise-select");
 const startButtons = [byId("start-record"), byId("start-practice")];
 const finishButton = byId("finish-button");
+const userMannequin = byId("user-mannequin");
 const feedback = createFeedback({
   message: byId("feedback-message"),
   panel: byId("panel"),
@@ -24,6 +30,9 @@ const feedback = createFeedback({
   accuracyText: byId("accuracy-text"),
   accuracyBar: byId("accuracy-bar"),
   hint: byId("practice-hint"),
+  measure: byId("measure-box"),
+  measureText: byId("measure-text"),
+  measureBar: byId("measure-bar"),
 });
 const panel = createPanel({
   indicators: byId("indicators"),
@@ -32,8 +41,22 @@ const panel = createPanel({
   fill: byId("depth-fill"),
   value: byId("depth-value"),
 });
+const referenceControls = createReferenceControls({
+  box: byId("reference-options"),
+  playbackChoice: byId("playback-choice"),
+  playbackBox: byId("playback-controls"),
+  toggle: byId("playback-toggle"),
+  speeds: byId("playback-speeds"),
+  ankleNote: byId("ankle-note"),
+});
 const devTools = createDevTools(
-  { angles: byId("angles-view"), attemptLog: byId("attempt-log"), captureButton: byId("capture-button") },
+  {
+    angles: byId("angles-view"),
+    attemptLog: byId("attempt-log"),
+    captureButton: byId("capture-button"),
+    bodySize: byId("body-size-view"),
+    ankleLimit: byId("ankle-limit-view"),
+  },
   video,
 );
 
@@ -44,6 +67,12 @@ let startedAt = null; // 기록의 startedAt: 시작 버튼을 누른 시각
 let frameRequest = 0;
 let lastVideoTime = -1;
 let partialHint = null; // 연습 모드: 방금 끝난 범위 미달 { cue, until }
+let bodyMeasure = null; // 몸 길이 측정기 (F4). 몸 길이를 재는 모드에서만 만든다
+let bodySize = null; // 몸 길이 측정값 (F4). 측정이 끝나기 전에는 null이고, 저장하지 않는다
+let follow = null; // 맞춰 보기 (F6). 정답 뼈대를 쓰는 모드에서 몸 길이를 다 잰 뒤 만든다
+let matchGlow = null; // 정답 뼈대를 밝게 보여 줄지 (F6)
+let playback = null; // 따라 하기 (F7). 재생하는 종목에서 몸 길이를 다 잰 뒤 만든다
+let ankleLimit = null; // 발목 상한 개인화 (F9). 스쿼트 연습에서 몸 길이를 다 잰 뒤 만든다
 
 loadEngine();
 byId("start-record").addEventListener("click", () => start("record"));
@@ -86,9 +115,15 @@ async function start(modeName) {
   byId("result").hidden = true;
   mode = MODES[modeName];
   partialHint = null;
+  bodyMeasure = mode.measureBody ? createBodyMeasure(exerciseSelect.value) : null;
+  bodySize = null;
+  follow = null;
+  playback = null;
+  ankleLimit = null;
   feedback.reset();
   devTools.reset();
   panel.setup(exerciseSelect.value, mode);
+  referenceControls.setup(exerciseSelect.value, mode);
   showMode();
   session = createSession(exerciseSelect.value, performance.now());
   startedAt = new Date();
@@ -111,7 +146,9 @@ function finish() {
   context.clearRect(0, 0, canvas.width, canvas.height);
   setRunning(false);
   byId("practice-badge").hidden = true;
+  referenceControls.hide();
   feedback.hint(null, performance.now(), false);
+  feedback.measure(null);
   const { stats } = session;
   session = null;
   if (mode.save) showResult(stats);
@@ -123,15 +160,69 @@ function loop() {
   if (video.currentTime !== lastVideoTime) {
     lastVideoTime = video.currentTime;
     const now = performance.now();
-    const landmarks = engine.detect(video, now);
-    engine.draw(landmarks);
+    const { landmarks, world } = engine.detect(video, now);
     devTools.frame(landmarks, now);
-    render(session.processFrame(landmarks, video.videoWidth, video.videoHeight, now), now);
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    if (bodyMeasure && !bodySize && now >= session.countdownEndsAt) {
+      engine.draw(landmarks);
+      measureBody(landmarks, world, now);
+    } else {
+      const view = session.processFrame(landmarks, video.videoWidth, video.videoHeight, now);
+      // 내 뼈대를 마네킹으로 (F8): 판정 중인 프레임만 마네킹으로 그리고, 그 밖에는 선 뼈대를 그린다
+      const mannequin = userMannequin.checked && view.points !== null;
+      showReference(view, now); // 정답 뼈대는 사용자 뼈대 아래에 깔리도록 먼저 그린다
+      if (!mannequin) engine.draw(landmarks);
+      render(view, now, mannequin);
+    }
   }
   frameRequest = requestAnimationFrame(loop);
 }
 
-function render(view, now) {
+// 몸 길이를 재는 프레임 (F4): 카운트다운이 끝나면 판정을 잠시 쉬고 안내와 진행 막대만 보여 준다.
+// 다 재면 다음 프레임부터 판정한다
+function measureBody(landmarks, world, now) {
+  const step = bodyMeasure.add(landmarks, world, video.videoWidth, video.videoHeight);
+  feedback.status(step.status, now);
+  feedback.measure(step.result ? null : step);
+  devTools.showPlacement(step.placement);
+  if (!step.result) return;
+  bodySize = step.result;
+  const exercise = session.stats.exercise;
+  if (mode.referencePose) {
+    follow = createReferenceFollow(exercise, bodySize);
+    matchGlow = createMatchGlow(exercise);
+    playback = hasPlayback(exercise) ? createPlayback(exercise, follow, referenceControls.speed(), now) : null;
+    ankleLimit = exercise === "squat" ? createAnkleLimit() : null; // 정강이 상한은 스쿼트에만 있다
+    referenceControls.attach(playback);
+  }
+  devTools.showBodySize(exercise, bodySize, follow?.thetaMax);
+}
+
+// 발목 상한 개인화 (F9): 반복 시도가 끝날 때마다 이 세션의 정강이 상한으로 정답 자세를 다시 만들고,
+// 상한을 낮췄으면 "오늘 발목 범위에 맞춘 정답 자세예요"를 보여 준다. 따라 하기도 같은 정답 자세라 함께 바뀐다
+function applyAnkleLimit() {
+  follow.setShinMax(ankleLimit.limit);
+  referenceControls.showAnkleNote(ankleLimit.limit !== null);
+  devTools.showAnkleLimit(ankleLimit.limit, ankleLimit.summary, follow.thetaMax);
+}
+
+// 정답 뼈대 (F6·F7): 몸 길이를 잰 뒤, 고른 보기에 따라 그린다.
+// 맞춰 보기는 판정 중인 프레임에서 사용자의 깊이·발목을 따라가고, 따라 하기는 사용자의 마지막 자리에서 반복 동작을 재생한다.
+// 보기를 꺼도 밝게 보여 줄 시간과 따라 하기 자리는 계속 잰다 (다시 켰을 때 이어지도록)
+function showReference(view, now) {
+  if (!follow) return;
+  if (ankleLimit?.update(view)) applyAnkleLimit();
+  const glowing = matchGlow.update(view, now);
+  playback?.see(view);
+  const choice = referenceControls.view();
+  let points = null;
+  if (choice === "follow") points = follow.pose(view);
+  else if (choice === "playback") points = playback?.pose(now);
+  if (points) drawReference(context, points, glowing);
+}
+
+// mannequin: 사용자 뼈대를 마네킹으로 그린다 (F8)
+function render(view, now, mannequin) {
   const exercise = session.stats.exercise;
   if (view.status) feedback.status(view.status, now);
   if (mode.practiceHints) feedback.hint(practiceHint(view, now), now, byId("practice-voice").checked);
@@ -139,8 +230,8 @@ function render(view, now) {
   if (view.success && mode.sounds) feedback.success();
   if (mode.showNumbers) feedback.progress(progressText(session.stats), computeAccuracy(session.stats));
   panel.update(view);
-  drawOverlay(context, exercise, view, mode);
-  devTools.show(view, exercise);
+  drawOverlay(context, exercise, view, mode, mannequin);
+  devTools.show(view, exercise, referenceControls.view() === "playback" ? playback?.depth(now) : undefined);
 }
 
 // 연습 모드 힌트 (F1): 주황 이상인 지표와 3초 안에 끝난 범위 미달 중 우선순위가 가장 높은 하나

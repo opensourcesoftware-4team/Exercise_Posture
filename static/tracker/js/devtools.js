@@ -1,5 +1,8 @@
-// 개발용 도구: 실시간 각도, 반복별 판정 값, 랜드마크 녹화 (HANDOFF 9장. 기준값 조정과 tests/fixtures용)
+// 개발용 도구: 실시간 각도, 반복별 판정 값, 랜드마크 녹화 (HANDOFF 9장. 기준값 조정과 tests/fixtures용),
+// 몸 길이 측정값 (추가 기능 F4), 정답 뼈대 깊이 (F6·F7), 발목 상한 관찰 값 (F9)
+import { lengthDifference } from "./body-measure.js";
 import { ERROR_NAMES, MEASURE_LABELS } from "./catalog.js";
+import { ANKLE_MIN_ATTEMPTS, MEASURE_STANCE_MIN, MEASURE_TURN_MAX, SHIN_MAX } from "./config.js";
 
 const CAPTURE_SECONDS = 10; // 랜드마크 녹화 길이 (스쿼트 3~4회)
 const LOG_SIZE = 10; // 반복별 판정 값을 몇 개까지 보여 줄지
@@ -37,16 +40,71 @@ function download(filename, data) {
   URL.revokeObjectURL(url);
 }
 
-// elements: angles(실시간 각도 글자), attemptLog(판정 값 목록), captureButton(녹화 버튼)
+// 예: "shank 181px · thigh 176px · ... · facing +1 · heelOffset -24px · heelDrop 15px"
+function describeBodySize(size) {
+  const lengths = Object.entries(size.lengths).map(([name, value]) => `${name} ${Math.round(value)}px`);
+  const extra = [`facing ${size.facing > 0 ? "+1" : "-1"}`];
+  if (size.heelOffset !== undefined) extra.push(`heelOffset ${Math.round(size.heelOffset)}px`);
+  if (size.heelDrop !== undefined) extra.push(`heelDrop ${Math.round(size.heelDrop)}px`);
+  if (size.floorDrop !== undefined) extra.push(`floorDrop ${Math.round(size.floorDrop)}px`);
+  if (size.turn !== undefined) extra.push(`몸 방향 ${Math.round(size.turn)}°`);
+  if (size.stance !== undefined) extra.push(`발 간격/어깨 너비 ${size.stance.toFixed(2)}`);
+  return [...lengths, ...extra].join(" · ");
+}
+
+// 예: "관찰 상위 5% 24.3° (프레임 132개, 반복 4회) → 정강이 상한 24° · 정답 최대 깊이 51°"
+function describeAnkleLimit(limit, summary, thetaMax) {
+  const { observed, frames, attempts } = summary;
+  if (attempts < ANKLE_MIN_ATTEMPTS || observed === null) {
+    return `관찰 중: 반복 ${attempts}/${ANKLE_MIN_ATTEMPTS}회, 뒤꿈치를 붙인 프레임 ${frames}개`;
+  }
+  const applied = limit === null ? `SHIN_MAX ${SHIN_MAX}° 그대로` : `정강이 상한 ${limit}°`;
+  return `관찰 상위 5% ${observed.toFixed(1)}° (프레임 ${frames}개, 반복 ${attempts}회) → ${applied} · 정답 최대 깊이 ${thetaMax}°`;
+}
+
+// elements: angles(실시간 각도 글자), attemptLog(판정 값 목록), captureButton(녹화 버튼), bodySize(몸 길이 측정값),
+//           ankleLimit(발목 상한 관찰 값)
 export function createDevTools(elements, video) {
   const idleLabel = `랜드마크 ${CAPTURE_SECONDS}초 녹화`;
   let log = [];
   let capture = null; // 녹화 중이면 { exercise, frames, until }
+  let lastBodySize = null; // 직전 측정 { exercise, size }. 두 번 잰 값을 비교하려고 세션이 바뀌어도 남긴다
+  let thetaMax; // 스쿼트 정답 자세의 최대 깊이 (F6). 몸 길이를 재기 전이거나 스쿼트가 아니면 undefined
 
   return {
     reset() {
       log = [];
+      thetaMax = undefined;
       elements.attemptLog.textContent = "";
+      elements.bodySize.textContent = "";
+      elements.ankleLimit.textContent = "";
+    },
+
+    // 몸 길이를 재는 동안 프레임마다: 몸 방향과 발 간격 비율 (스쿼트만. 3D 추정이 자세를 구분하는지 카메라로 확인하려고)
+    showPlacement(placement) {
+      if (placement === null) return;
+      elements.angles.textContent =
+        `몸 방향 ${Math.round(placement.turn)}° (${MEASURE_TURN_MAX}° 이하면 잰다, 0°=정측면) · ` +
+        `발 간격/어깨 너비 ${placement.stance.toFixed(2)} (${MEASURE_STANCE_MIN.toFixed(1)} 이상이면 잰다)`;
+    },
+
+    // 몸 길이 측정이 끝나면 한 번: 측정값(px)과, 같은 종목 직전 측정과의 가장 큰 길이 차이 (5% 이내면 재현됨).
+    // maxDepth: 스쿼트 정답 자세의 최대 깊이 thetaMax (F6, 정답 뼈대를 쓰지 않으면 undefined)
+    showBodySize(exercise, size, maxDepth) {
+      thetaMax = maxDepth;
+      let text = describeBodySize(size);
+      if (thetaMax !== undefined) text += ` · 정답 최대 깊이 ${thetaMax}°`;
+      if (lastBodySize?.exercise === exercise) {
+        text += `\n직전 측정과 최대 차이 ${lengthDifference(size, lastBodySize.size).toFixed(1)}%`;
+      }
+      elements.bodySize.textContent = text;
+      lastBodySize = { exercise, size };
+    },
+
+    // 스쿼트 연습에서 반복 시도가 끝날 때마다 (F9): 관찰한 정강이 기울기와 이 세션의 정강이 상한, 바뀐 최대 깊이
+    showAnkleLimit(limit, summary, maxDepth) {
+      thetaMax = maxDepth;
+      elements.ankleLimit.textContent = describeAnkleLimit(limit, summary, maxDepth);
     },
 
     setRunning(running) {
@@ -70,9 +128,15 @@ export function createDevTools(elements, video) {
       elements.captureButton.textContent = idleLabel;
     },
 
-    // 프레임마다: 실시간 각도와, 이번 프레임에 끝난 반복의 판정 값
-    show(view, exercise) {
-      elements.angles.textContent = view.angles ? formatAngles(view.angles) : "";
+    // 프레임마다: 실시간 각도와 정답 뼈대의 깊이, 이번 프레임에 끝난 반복의 판정 값.
+    // playbackDepth: 따라 하기(F7) 중이면 재생 깊이(°), 아니면 undefined (스쿼트는 맞춰 보기 깊이를 보여 준다)
+    show(view, exercise, playbackDepth) {
+      const parts = view.angles ? [formatAngles(view.angles)] : [];
+      if (playbackDepth !== undefined) parts.push(`재생 깊이 ${Math.round(playbackDepth)}°`);
+      else if (view.angles && thetaMax !== undefined) {
+        parts.push(`정답 깊이 ${Math.round(Math.min(view.angles.thigh, thetaMax))}° (최대 ${thetaMax}°)`);
+      }
+      elements.angles.textContent = parts.join(" · ");
       if (view.events.length === 0) return;
       log = [...view.events.map((event) => describeAttempt(exercise, event)).reverse(), ...log].slice(0, LOG_SIZE);
       elements.attemptLog.textContent = log.join("\n");
