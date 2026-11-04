@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Motion Fitness Platform - Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;600;800&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./dashboard.css">
+  <script type="module" src="./js/main.js"></script>
+</head>
+<body class="db-page">
+  <nav class="db-nav">
+    <div class="db-logo">MOTION<span>AI</span></div>
+    <ul class="db-nav-links">
+      <li><a href="/">Introduction</a></li>
+      <li><a href="/tracker">AI Tracker</a></li>
+      <li class="active"><a href="/static/dashboard/dashboard.html">Dashboard</a></li>
+    </ul>
+  </nav>
+
+  <main class="db-main">
+    <header class="db-header">
+      <div>
+        <h2>Performance Analytics</h2>
+        <p class="db-muted">스쿼트 최근 7회 기록 (종목 탭·기간 선택은 다음 단계에서 추가)</p>
+      </div>
+    </header>
+
+    <div id="db-message" class="db-message" hidden></div>
+
+    <div class="db-summary" id="summary-cards"></div>
+
+    <section class="db-card">
+      <h3>수행량·정확도 추이</h3>
+      <p class="db-muted" id="trend-note" hidden>기록이 2개 이상이면 변화가 보여요</p>
+      <div class="db-chart-box" id="trend-chart-box"><canvas id="trend-canvas"></canvas></div>
+    </section>
+
+    <section class="db-card db-table-card">
+      <h3>최근 분석 수행 히스토리</h3>
+      <table class="db-table">
+        <thead>
+          <tr><th>날짜 및 시간</th><th>수행 볼륨</th><th>자세 정확도</th><th>대표 오답</th><th></th></tr>
+        </thead>
+        <tbody id="history-body"></tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>
