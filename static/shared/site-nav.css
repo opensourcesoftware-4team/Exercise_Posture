@@ -1,0 +1,51 @@
+/* 기능 화면 공통 상단 메뉴 (MVP 통합: AI 자세 분석·운동 가이드 화면). 색·글꼴은 메인 화면·대시보드 메뉴와 같은 값 */
+.site-nav {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px 24px;
+  padding: 1.2rem clamp(16px, 4vw, 4rem);
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: "Inter", "Segoe UI", "Malgun Gothic", sans-serif;
+}
+
+.site-nav-logo {
+  color: #f8fafc;
+  font-family: "Urbanist", "Segoe UI", sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -1px;
+  text-decoration: none;
+}
+
+.site-nav-logo span {
+  color: #0ea5e9;
+}
+
+.site-nav-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-nav-links a {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+.site-nav-links a:hover,
+.site-nav-links a[aria-current="page"] {
+  color: #0ea5e9;
+}
