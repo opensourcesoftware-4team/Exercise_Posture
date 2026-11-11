@@ -4,10 +4,21 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AI 실시간 자세 분석</title>
+  <link rel="stylesheet" href="../shared/site-nav.css">
   <link rel="stylesheet" href="tracker.css">
   <link rel="stylesheet" href="tracker-modes.css">
 </head>
 <body class="tracker-page">
+  <nav class="site-nav" aria-label="주 메뉴">
+    <a class="site-nav-logo" href="/">MOTION<span>AI</span></a>
+    <ul class="site-nav-links">
+      <li><a href="/">Introduction</a></li>
+      <li><a href="/tracker/" aria-current="page">AI Tracker</a></li>
+      <li><a href="/dashboard/">Dashboard</a></li>
+      <li><a href="/guide/">Guide</a></li>
+      <li><a href="/#community">Community</a></li>
+    </ul>
+  </nav>
   <main class="tracker">
     <h1>AI 실시간 자세 분석</h1>
     <p class="tracker-guide">카메라를 몸 옆쪽에 두고, 머리부터 발끝까지 화면에 들어오게 서 주세요.</p>
@@ -23,6 +34,11 @@
         <video id="webcam" autoplay playsinline muted></video>
         <canvas id="pose-canvas"></canvas>
         <p class="tracker-hint" id="practice-hint" hidden></p>
+        <div class="tracker-measure" id="measure-box" hidden>
+          <strong>몸 길이를 재고 있어요</strong>
+          <p id="measure-text"></p>
+          <div class="tracker-measure-track"><div id="measure-bar"></div></div>
+        </div>
       </div>
 
       <div class="tracker-controls">
@@ -36,6 +52,19 @@
           <button id="start-practice" class="secondary" type="button" disabled>연습하기 (기록 없음)</button>
         </div>
         <label class="tracker-option"><input type="checkbox" id="practice-voice"> 연습 중 음성 안내</label>
+        <label class="tracker-option"><input type="checkbox" id="user-mannequin"> 내 뼈대도 마네킹으로 보기</label>
+        <div class="tracker-reference" id="reference-options" hidden>
+          <div class="tracker-choice" role="radiogroup" aria-label="정답 뼈대">
+            <label><input type="radio" name="reference-view" value="off"> 끄기</label>
+            <label><input type="radio" name="reference-view" value="follow" checked> 맞춰 보기</label>
+            <label id="playback-choice"><input type="radio" name="reference-view" value="playback"> 따라 하기</label>
+          </div>
+          <div class="tracker-playback" id="playback-controls" hidden>
+            <button id="playback-toggle" class="secondary" type="button" disabled>일시정지</button>
+            <div class="tracker-choice" id="playback-speeds" role="radiogroup" aria-label="배속"></div>
+          </div>
+          <p class="tracker-note" id="ankle-note" hidden>오늘 발목 범위에 맞춘 정답 자세예요</p>
+        </div>
         <button id="finish-button" type="button" disabled>종료하고 저장</button>
 
         <div class="tracker-panel" id="panel">
@@ -66,6 +95,10 @@
           <p id="angles-view"></p>
           <p>최근 반복 판정 값</p>
           <pre id="attempt-log"></pre>
+          <p>몸 길이 측정값 (연습 모드)</p>
+          <pre id="body-size-view"></pre>
+          <p>발목 상한 (연습 모드 스쿼트)</p>
+          <pre id="ankle-limit-view"></pre>
           <button id="capture-button" type="button" disabled>랜드마크 10초 녹화</button>
         </details>
       </div>

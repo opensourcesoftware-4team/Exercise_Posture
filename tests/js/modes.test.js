@@ -13,6 +13,11 @@ test("수행 모드는 숫자·효과음·저장이 켜져 있고, 연습 모드
   );
 });
 
+test("몸 길이는 연습 모드에서만 잰다", () => {
+  assert.equal(MODES.record.measureBody, false);
+  assert.equal(MODES.practice.measureBody, true);
+});
+
 test("연습 모드에서는 빨강(수정) 단계도 주황(주의)으로 보인다", () => {
   assert.equal(displayStage("bad", MODES.record), "bad");
   assert.equal(displayStage("bad", MODES.practice), "warn");

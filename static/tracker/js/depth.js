@@ -1,5 +1,6 @@
 // 깊이 게이지와 안내선 계산 (추가 기능 F3). 눈금과 구간은 판정 기준값(config.js)을 그대로 쓴다.
 import { PUSHUP, SQUAT } from "./config.js";
+import { facingOf } from "./geometry.js";
 
 // 종목별 게이지: 어떤 각도를 보여 주는지, 막대 위·아래 끝의 값, 눈금. 플랭크는 게이지가 없다.
 export const GAUGES = {
@@ -42,9 +43,9 @@ export function depthZone(exercise, value) {
 }
 
 // 스쿼트 안내선: 무릎에서, 허벅지-수직 각이 통과 각(70°)일 때 엉덩이가 있을 곳까지의 선분 (픽셀 좌표).
-// 엉덩이는 사람이 보는 방향의 반대쪽(뒤)으로 빠진다. 보는 방향은 코가 귀보다 앞쪽인지로 정한다.
+// 엉덩이는 사람이 보는 방향의 반대쪽(뒤)으로 빠진다.
 export function guideLine(points) {
-  const facing = points.nose.x > points.ear.x ? 1 : -1;
+  const facing = facingOf(points);
   const thighLength = Math.hypot(points.hip.x - points.knee.x, points.hip.y - points.knee.y);
   const radians = (SQUAT.PASS_MIN * Math.PI) / 180;
   return {

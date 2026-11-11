@@ -89,6 +89,16 @@ export const PRACTICE_HINTS = {
   ],
 };
 
+// 몸 길이 측정 자세 안내 (추가 기능 F4). 스쿼트는 발을 어깨너비로 벌린 선 자세, 푸시업은 팔을 편 시작 자세,
+// 플랭크는 플랭크 자세에서 잰다
+export const MEASURE_TEXT = {
+  squat: "발을 어깨너비로 벌리고 옆으로 서서 잠깐 기다려 주세요.",
+  pushup: "팔을 편 푸시업 시작 자세로 잠깐 멈춰 주세요.",
+  plank: "플랭크 자세로 잠깐 멈춰 주세요.",
+};
+export const MEASURE_STANCE_TEXT = "발을 어깨너비보다 조금 더 벌려 주세요."; // 스쿼트 측정: 발 간격이 좁을 때
+export const MEASURE_TURN_TEXT = "몸을 카메라와 직각이 되게 정확히 옆으로 돌려 주세요."; // 스쿼트 측정: 몸이 비스듬할 때
+
 // 모드별 화면 문구 (추가 기능 F1)
 export const MODE_TEXT = {
   finishRecord: "종료하고 저장",

@@ -137,6 +137,7 @@ export function createSession(exercise, now, countdownSeconds = COUNTDOWN_SECOND
 
   return {
     stats,
+    countdownEndsAt: measureFrom, // 준비 카운트다운이 끝나는 시각(ms)
     // 프레임 1장을 처리한다. landmarks는 MediaPipe 결과(사람이 없으면 null), frameAt은 밀리초다.
     // 반환: status(상태 문구, 없으면 null), cues(오답 안내 id), success(올바른 반복 완료),
     //       angles(다듬은 각도), events(이번 프레임에 끝난 반복·범위 미달과 그 판정 값),
