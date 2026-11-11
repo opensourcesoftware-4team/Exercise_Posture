@@ -1,4 +1,4 @@
-// 대시보드 화면 조립 + 상태(종목). 기간은 최근 7회 고정. 값은 모두 textContent로 넣는다.
+// 대시보드 화면 조립 + 상태(종목·기간). 값은 모두 textContent로 넣는다.
 import { getStats, getRecords, deleteRecord } from "./api.js";
 import { drawTrend, destroyTrend } from "./charts.js";
 import { errorLabel, EXERCISE_NAMES } from "../../shared/error-labels.js";
@@ -81,7 +81,13 @@ async function onDelete(record) {
   if (!confirm(`${rowLabel(record.startedAt)} 기록을 삭제할까요?`)) return;
   try {
     await deleteRecord(record.id);
-    await load();
+    await $("range-select").addEventListener("change", (e) => {
+  const [type, value] = e.target.value.split(":");
+  state.range = { type, value: Number(value) };
+  load();
+});
+
+load();
   } catch (e) {
     showMessage(e.message);
   }
@@ -105,5 +111,11 @@ async function load() {
     showMessage(`데이터를 불러오지 못했습니다: ${e.message}`);
   }
 }
+
+$("range-select").addEventListener("change", (e) => {
+  const [type, value] = e.target.value.split(":");
+  state.range = { type, value: Number(value) };
+  load();
+});
 
 load();
