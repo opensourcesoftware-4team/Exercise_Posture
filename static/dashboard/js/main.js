@@ -81,13 +81,7 @@ async function onDelete(record) {
   if (!confirm(`${rowLabel(record.startedAt)} 기록을 삭제할까요?`)) return;
   try {
     await deleteRecord(record.id);
-    await $("range-select").addEventListener("change", (e) => {
-  const [type, value] = e.target.value.split(":");
-  state.range = { type, value: Number(value) };
-  load();
-});
-
-load();
+    await load();
   } catch (e) {
     showMessage(e.message);
   }
