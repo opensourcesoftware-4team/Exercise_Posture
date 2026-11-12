@@ -20,7 +20,7 @@ export const MEASURE_TURN_MAX = 15; // 스쿼트: 몸이 정측면(카메라와 
 
 // 추가 기능 F5: 체형 맞춤 정답 자세 (스쿼트). 푸시업 정답 자세는 PUSHUP.BOTTOM_MAX까지 내려간다
 export const DEPTH_TARGET = 90; // 정답 동작이 보여 주는 최대 허벅지-수직 각 (허벅지 수평)
-export const SHIN_MAX = 30; // 정답 자세의 정강이 기울기 상한 (팀 설정값)
+export const SHIN_MAX = 40; // 정답 자세의 정강이 기울기 상한 (팀 설정값. 명세 30°로는 정답 자세가 통과 깊이 70°에 못 미쳐 11/12 40°로 올림)
 export const TRUNK_EXTRA_MAX = 10; // 정강이 상한에 걸렸을 때 상체를 정강이보다 더 숙일 수 있는 한도
 // 무게중심 계산용 분절 질량비 (Winter): 머리·팔·몸통 / 허벅지 양쪽 / 정강이 양쪽. 발은 바닥에 있어 뺀다
 export const MASS_HAT = 0.678;
@@ -32,6 +32,9 @@ export const REFERENCE_ALPHA = 0.45; // 정답 뼈대 불투명도
 export const REFERENCE_GLOW_ALPHA = 0.9; // 맞았을 때 밝게 보여 주는 불투명도 (팀 설정값)
 export const MATCH_HOLD_SECONDS = 1; // 반복 구간에서 지표가 모두 초록인 상태가 이만큼 이어지면 정답 뼈대를 밝게
 export const MATCH_GLOW_SECONDS = 1; // 밝게 보여 주는 시간
+// 마네킹 대비 상체 안내 (연습 모드 스쿼트): 상체 기울기가 같은 깊이의 정답 자세와 이만큼(°) 넘게 다르면 안내한다.
+// 판정(SQUAT.TORSO_SHIN_LIMIT)과 달리 기록하지 않는다. 문헌 10° + 측정 여유 5° (팀 설정값)
+export const REFERENCE_TORSO_LIMIT = 15;
 
 // 추가 기능 F7: 따라 하기 (정답 뼈대 자동 재생)
 export const PLAYBACK_PERIOD_SECONDS = 4; // 1배속 반복 한 번 (내려가기 2초, 올라오기 2초)

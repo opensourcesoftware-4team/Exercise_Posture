@@ -66,6 +66,7 @@ export const INDICATOR_LABELS = {
   bodyLine: "몸통 정렬",
   armLean: "팔 기울기",
   neck: "목 정렬",
+  referenceTorso: "마네킹 대비 상체",
 };
 
 // 연습 모드 권유형 힌트 (추가 기능 F1). 위에 있을수록 먼저 보여 주고, 한 번에 하나만 보인다.
@@ -75,6 +76,9 @@ export const PRACTICE_HINTS = {
     { keys: ["heelLift"], text: "뒤꿈치를 바닥에 붙여 볼까요?" },
     { keys: ["torsoLean"], text: "가슴을 조금만 세워 볼까요?" },
     { keys: ["shinLean"], text: "엉덩이를 조금 뒤로 빼 볼까요?" },
+    // 마네킹 대비 상체 안내 (torso-guide.js): 근거 있는 판정 힌트 다음에 보여 준다
+    { keys: ["torsoUpright"], text: "상체를 마네킹처럼 조금 더 숙여 볼까요?" },
+    { keys: ["torsoForward"], text: "가슴을 마네킹만큼 세워 볼까요?" },
     { keys: ["partialRep"], text: "조금만 더 앉아 볼까요?" },
   ],
   pushup: [
