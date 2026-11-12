@@ -32,6 +32,9 @@ export const REFERENCE_ALPHA = 0.45; // 정답 뼈대 불투명도
 export const REFERENCE_GLOW_ALPHA = 0.9; // 맞았을 때 밝게 보여 주는 불투명도 (팀 설정값)
 export const MATCH_HOLD_SECONDS = 1; // 반복 구간에서 지표가 모두 초록인 상태가 이만큼 이어지면 정답 뼈대를 밝게
 export const MATCH_GLOW_SECONDS = 1; // 밝게 보여 주는 시간
+// 마네킹 대비 상체 안내 (연습 모드 스쿼트): 상체 기울기가 같은 깊이의 정답 자세와 이만큼(°) 넘게 다르면 안내한다.
+// 판정(SQUAT.TORSO_SHIN_LIMIT)과 달리 기록하지 않는다. 문헌 10° + 측정 여유 5° (팀 설정값)
+export const REFERENCE_TORSO_LIMIT = 15;
 
 // 추가 기능 F7: 따라 하기 (정답 뼈대 자동 재생)
 export const PLAYBACK_PERIOD_SECONDS = 4; // 1배속 반복 한 번 (내려가기 2초, 올라오기 2초)

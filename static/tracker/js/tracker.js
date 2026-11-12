@@ -6,11 +6,12 @@ import { createDevTools } from "./devtools.js";
 import { createFeedback } from "./feedback.js";
 import { createMatchGlow, createReferenceFollow } from "./follow.js";
 import { MODES, pickPracticeHint } from "./modes.js";
-import { drawOverlay, drawReference } from "./overlay.js";
+import { drawOverlay, drawReference, referenceWarnParts } from "./overlay.js";
 import { createPanel } from "./panel.js";
 import { createPlayback, hasPlayback } from "./playback.js";
 import { createPoseEngine, startCamera, stopCamera } from "./pose-engine.js";
 import { createReferenceControls } from "./reference-controls.js";
+import { createTorsoGuide } from "./torso-guide.js";
 import { buildRecord, computeAccuracy, createSession, saveRecord, sessionCount, toLocalIsoString } from "./session.js";
 
 const PARTIAL_HINT_MS = 3000; // 연습 모드에서 범위 미달 힌트를 보여 주는 시간
@@ -73,6 +74,7 @@ let follow = null; // 맞춰 보기 (F6). 정답 뼈대를 쓰는 모드에서 �
 let matchGlow = null; // 정답 뼈대를 밝게 보여 줄지 (F6)
 let playback = null; // 따라 하기 (F7). 재생하는 종목에서 몸 길이를 다 잰 뒤 만든다
 let ankleLimit = null; // 발목 상한 개인화 (F9). 스쿼트 연습에서 몸 길이를 다 잰 뒤 만든다
+let torsoGuide = null; // 마네킹 대비 상체 안내. 스쿼트 연습에서 몸 길이를 다 잰 뒤 만든다
 
 loadEngine();
 byId("start-record").addEventListener("click", () => start("record"));
@@ -120,6 +122,7 @@ async function start(modeName) {
   follow = null;
   playback = null;
   ankleLimit = null;
+  torsoGuide = null;
   feedback.reset();
   devTools.reset();
   panel.setup(exerciseSelect.value, mode);
@@ -167,7 +170,9 @@ function loop() {
       engine.draw(landmarks);
       measureBody(landmarks, world, now);
     } else {
-      const view = session.processFrame(landmarks, video.videoWidth, video.videoHeight, now);
+      const judged = session.processFrame(landmarks, video.videoWidth, video.videoHeight, now);
+      // 맞춰 보기 중이면 마네킹 대비 상체 지표를 더한다. 판정·기록은 judged 그대로다
+      const view = torsoGuide ? torsoGuide.apply(judged, now, referenceControls.view() === "follow") : judged;
       // 내 뼈대를 마네킹으로 (F8): 판정 중인 프레임만 마네킹으로 그리고, 그 밖에는 선 뼈대를 그린다
       const mannequin = userMannequin.checked && view.points !== null;
       showReference(view, now); // 정답 뼈대는 사용자 뼈대 아래에 깔리도록 먼저 그린다
@@ -193,6 +198,7 @@ function measureBody(landmarks, world, now) {
     matchGlow = createMatchGlow(exercise);
     playback = hasPlayback(exercise) ? createPlayback(exercise, follow, referenceControls.speed(), now) : null;
     ankleLimit = exercise === "squat" ? createAnkleLimit() : null; // 정강이 상한은 스쿼트에만 있다
+    torsoGuide = mode.referenceTorso && exercise === "squat" ? createTorsoGuide(follow) : null;
     referenceControls.attach(playback);
   }
   devTools.showBodySize(exercise, bodySize, follow?.thetaMax);
@@ -218,7 +224,7 @@ function showReference(view, now) {
   let points = null;
   if (choice === "follow") points = follow.pose(view);
   else if (choice === "playback") points = playback?.pose(now);
-  if (points) drawReference(context, points, glowing);
+  if (points) drawReference(context, points, glowing, referenceWarnParts(view.indicators));
 }
 
 // mannequin: 사용자 뼈대를 마네킹으로 그린다 (F8)
