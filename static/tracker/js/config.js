@@ -20,7 +20,7 @@ export const MEASURE_TURN_MAX = 15; // 스쿼트: 몸이 정측면(카메라와 
 
 // 추가 기능 F5: 체형 맞춤 정답 자세 (스쿼트). 푸시업 정답 자세는 PUSHUP.BOTTOM_MAX까지 내려간다
 export const DEPTH_TARGET = 90; // 정답 동작이 보여 주는 최대 허벅지-수직 각 (허벅지 수평)
-export const SHIN_MAX = 30; // 정답 자세의 정강이 기울기 상한 (팀 설정값)
+export const SHIN_MAX = 40; // 정답 자세의 정강이 기울기 상한 (팀 설정값. 명세 30°로는 정답 자세가 통과 깊이 70°에 못 미쳐 11/12 40°로 올림)
 export const TRUNK_EXTRA_MAX = 10; // 정강이 상한에 걸렸을 때 상체를 정강이보다 더 숙일 수 있는 한도
 // 무게중심 계산용 분절 질량비 (Winter): 머리·팔·몸통 / 허벅지 양쪽 / 정강이 양쪽. 발은 바닥에 있어 뺀다
 export const MASS_HAT = 0.678;
