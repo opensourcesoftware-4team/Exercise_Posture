@@ -1,10 +1,9 @@
-// 대시보드 기본 화면: 스쿼트 최근 7회 요약·추이 그래프·기록 표. 값은 모두 textContent로 넣는다.
+// 대시보드 화면 조립 + 상태(종목·기간). 값은 모두 textContent로 넣는다.
 import { getStats, getRecords, deleteRecord } from "./api.js";
 import { drawTrend, destroyTrend } from "./charts.js";
-import { errorLabel } from "../../shared/error-labels.js";
+import { errorLabel, EXERCISE_NAMES } from "../../shared/error-labels.js";
 
-const EXERCISE = "squat";
-const RANGE = { type: "last", value: 7 };
+const state = { exercise: "squat", range: { type: "last", value: 7 } };
 const $ = (id) => document.getElementById(id);
 
 function el(tag, className, text) {
@@ -22,6 +21,17 @@ function accuracyColor(acc) {
 
 // startedAt("2026-10-28T10:48:29+09:00") → "10/28 10:48" (서버 label과 같은 형식)
 const rowLabel = (startedAt) => `${startedAt.slice(5, 10).replace("-", "/")} ${startedAt.slice(11, 16)}`;
+
+function renderTabs() {
+  const box = $("exercise-tabs");
+  box.replaceChildren();
+  for (const [key, name] of Object.entries(EXERCISE_NAMES)) {
+    const btn = el("button", "db-tab" + (key === state.exercise ? " active" : ""), name);
+    btn.type = "button";
+    btn.addEventListener("click", () => { state.exercise = key; load(); });
+    box.append(btn);
+  }
+}
 
 function renderSummary(stats) {
   const box = $("summary-cards");
@@ -54,6 +64,7 @@ function renderTable(records) {
     const tr = el("tr");
     const errs = Object.entries(r.errors[r.exercise]).sort((a, b) => b[1] - a[1])[0];
     const top = errs && errs[1] > 0 ? `${errorLabel(r.exercise, errs[0])} ${errs[1]}회` : "-";
+    const unit = r.exercise === "plank" ? "초" : "회";
     const acc = el("td", "db-acc", `${r.accuracy}%`);
     acc.style.color = accuracyColor(r.accuracy);
     const del = el("button", "db-del", "삭제");
@@ -61,7 +72,7 @@ function renderTable(records) {
     del.addEventListener("click", () => onDelete(r));
     const delCell = el("td");
     delCell.append(del);
-    tr.append(el("td", "", rowLabel(r.startedAt)), el("td", "", `${r.count}회`), acc, el("td", "", top), delCell);
+    tr.append(el("td", "", rowLabel(r.startedAt)), el("td", "", `${r.count}${unit}`), acc, el("td", "", top), delCell);
     body.append(tr);
   }
 }
@@ -83,9 +94,10 @@ function showMessage(text) {
 }
 
 async function load() {
+  renderTabs();
   showMessage("");
   try {
-    const [records, stats] = await Promise.all([getRecords(EXERCISE), getStats(EXERCISE, RANGE)]);
+    const [records, stats] = await Promise.all([getRecords(state.exercise), getStats(state.exercise, state.range)]);
     renderSummary(stats);
     renderTrend(stats);
     renderTable(records);
@@ -93,5 +105,11 @@ async function load() {
     showMessage(`데이터를 불러오지 못했습니다: ${e.message}`);
   }
 }
+
+$("range-select").addEventListener("change", (e) => {
+  const [type, value] = e.target.value.split(":");
+  state.range = { type, value: Number(value) };
+  load();
+});
 
 load();

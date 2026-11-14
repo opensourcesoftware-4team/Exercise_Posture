@@ -25,10 +25,19 @@
     <header class="db-header">
       <div>
         <h2>Performance Analytics</h2>
-        <p class="db-muted">스쿼트 최근 7회 기록 (종목 탭·기간 선택은 다음 단계에서 추가)</p>
+        <p class="db-muted">종목별 수행량·정확도 기록</p>
       </div>
+      <label class="db-range">
+        <span class="db-muted">기간</span>
+        <select id="range-select">
+          <option value="last:7">최근 7회</option>
+          <option value="last:30">최근 30회</option>
+          <option value="days:30">최근 30일</option>
+        </select>
+      </label>
     </header>
 
+    <div class="db-tabs" id="exercise-tabs"></div>
     <div id="db-message" class="db-message" hidden></div>
 
     <div class="db-summary" id="summary-cards"></div>
