@@ -23,12 +23,25 @@ class PostStore:
                 );
                 CREATE INDEX IF NOT EXISTS posts_exercise_id
                     ON posts(exercise_type, id DESC);
+                CREATE TABLE IF NOT EXISTS comments (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    post_id INTEGER NOT NULL
+                        REFERENCES posts(id) ON DELETE CASCADE,
+                    nickname TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    request_id TEXT NOT NULL UNIQUE
+                );
+                CREATE INDEX IF NOT EXISTS comments_post_id
+                    ON comments(post_id, id);
             """)
 
     @contextmanager
     def connect(self):
         db = sqlite3.connect(self.path, timeout=10)
         db.row_factory = sqlite3.Row
+        # SQLite는 연결마다 외래 키 검사를 켜야 한다. 댓글이 없는 게시글에 붙지 않게 한다.
+        db.execute('PRAGMA foreign_keys=ON')
         try:
             with db:
                 yield db
@@ -68,3 +81,32 @@ class PostStore:
                 params + [page_size, (page - 1) * page_size],
             ).fetchall()
             return [self.public(row) for row in rows], total
+
+    # ---- 댓글 ----
+    @staticmethod
+    def public_comment(row):
+        return {key: row[key] for key in ('id', 'post_id', 'nickname', 'content', 'created_at')}
+
+    def create_comment(self, post_id, values, request_id, created_at):
+        """댓글 저장. 게시글이 없으면 None, 있으면 (댓글, 새로 저장했는지)."""
+        with self.connect() as db:
+            if not db.execute('SELECT 1 FROM posts WHERE id=?', (post_id,)).fetchone():
+                return None
+            cursor = db.execute(
+                """INSERT INTO comments (post_id,nickname,content,created_at,request_id)
+                   VALUES (?,?,?,?,?) ON CONFLICT(request_id) DO NOTHING""",
+                (post_id, values['nickname'], values['content'], created_at, request_id),
+            )
+            row = db.execute('SELECT * FROM comments WHERE request_id=?', (request_id,)).fetchone()
+            if row['post_id'] != post_id or any(row[key] != values[key] for key in values):
+                raise ValueError('같은 요청 번호에 서로 다른 입력이 사용되었습니다.')
+            return self.public_comment(row), cursor.rowcount == 1
+
+    def list_comments(self, post_id):
+        """게시글의 댓글을 작성 순으로. 게시글이 없으면 None."""
+        with self.connect() as db:
+            if not db.execute('SELECT 1 FROM posts WHERE id=?', (post_id,)).fetchone():
+                return None
+            rows = db.execute('SELECT * FROM comments WHERE post_id=? ORDER BY id',
+                              (post_id,)).fetchall()
+            return [self.public_comment(row) for row in rows]
