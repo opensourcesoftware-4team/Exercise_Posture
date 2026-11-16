@@ -1,4 +1,4 @@
-import { listPosts, getPost, createPost, listComments, createComment, requestKey } from './community-api.js';
+import { listPosts, getPost, createPost, listComments, createComment, listRecords, requestKey } from './community-api.js';
 
 const $ = id => document.getElementById(id);
 const labels = {squat: '스쿼트', pushup: '푸시업', plank: '플랭크', other: '기타'};
@@ -21,6 +21,54 @@ function dateText(value) {
     return new Intl.DateTimeFormat('ko-KR', {
         dateStyle: 'medium', timeStyle: 'short',
     }).format(new Date(value));
+}
+const viewLabels = {side: '측면', front: '정면'};
+// 플랭크 기록의 count는 바른 자세를 유지한 시간(초)이다.
+function amountText(record) {
+    return record.exercise === 'plank' ? `${record.count}초` : `${record.count}회`;
+}
+function recordSummary(record) {
+    return `${labels[record.exercise]} · ${dateText(record.started_at)} · ${amountText(record)} · 정확도 ${record.accuracy}%`;
+}
+function recordCard(record) {
+    const card = element('section', 'community-record');
+    card.setAttribute('aria-label', '첨부한 운동 기록');
+    card.append(element('p', 'community-record-title', '📊 첨부한 운동 기록'));
+    const grid = element('dl', 'community-record-grid');
+    for (const [label, value] of [
+        ['운동', labels[record.exercise]], ['측정 일시', dateText(record.started_at)],
+        [record.exercise === 'plank' ? '유지 시간' : '횟수', amountText(record)],
+        ['자세 정확도', `${record.accuracy}%`], ['촬영 방향', viewLabels[record.view] || record.view],
+    ]) {
+        const item = element('div');
+        item.append(element('dt', '', label), element('dd', '', value));
+        grid.append(item);
+    }
+    card.append(grid);
+    return card;
+}
+let recordsLoading = null;
+async function loadRecordOptions() {
+    // 작성 화면을 열 때마다 최신 기록을 불러온다. 선택해 둔 값은 목록에 남아 있으면 유지.
+    const select = $('community-record_id');
+    const selected = select.value;
+    const token = recordsLoading = {};
+    select.replaceChildren(new Option('기록을 불러오고 있습니다…', ''));
+    select.disabled = true;
+    try {
+        const records = await listRecords();
+        if (token !== recordsLoading) return;
+        select.replaceChildren(new Option(records.length ? '첨부하지 않음' : '첨부하지 않음 (저장된 운동 기록이 없어요)', ''));
+        for (const record of records) {
+            select.append(new Option(recordSummary({...record, started_at: record.startedAt}), record.id));
+        }
+        if ([...select.options].some(option => option.value === selected)) select.value = selected;
+    } catch {
+        if (token !== recordsLoading) return;
+        select.replaceChildren(new Option('첨부하지 않음 (운동 기록을 불러오지 못했어요)', ''));
+    } finally {
+        if (token === recordsLoading) select.disabled = false;
+    }
 }
 function status(text, error = false) {
     $('community-status').textContent = text;
@@ -72,8 +120,10 @@ async function renderList(query, token) {
             const card = element('a', 'community-card');
             card.href = `#community/post/${post.id}`;
             const header = element('div', 'community-card-top');
-            header.append(element('span', `community-tag community-tag-${post.exercise_type}`, labels[post.exercise_type]),
-                element('span', 'community-arrow', '↗'));
+            const tags = element('div', 'community-card-tags');
+            tags.append(element('span', `community-tag community-tag-${post.exercise_type}`, labels[post.exercise_type]));
+            if (post.record) tags.append(element('span', 'community-tag community-tag-record', '📊 기록 첨부'));
+            header.append(tags, element('span', 'community-arrow', '↗'));
             const meta = element('div', 'community-meta');
             meta.append(element('span', 'community-author', post.nickname),
                 element('time', '', dateText(post.created_at)));
@@ -108,7 +158,8 @@ async function renderDetail(id, token) {
         const title = element('h2', '', post.title);
         title.tabIndex = -1;
         container.replaceChildren(element('span', `community-tag community-tag-${post.exercise_type}`, labels[post.exercise_type]),
-            title, meta, element('div', 'community-body', post.content));
+            title, meta, ...(post.record ? [recordCard(post.record)] : []),
+            element('div', 'community-body', post.content));
         title.focus({preventScroll: true});
         $('community-comments').hidden = false;
         renderComments(post.id, token);
@@ -157,6 +208,7 @@ function renderRoute() {
     if (hash === '#community/write') {
         show('write');
         $('community-nickname').focus({preventScroll: true});
+        loadRecordOptions();
     } else if (match) {
         renderDetail(match[1], generation);
     } else if (/^#community(?:\?|$)/.test(hash)) {
@@ -166,7 +218,7 @@ function renderRoute() {
         $('community-detail-content').replaceChildren(element('p', 'community-error', '잘못된 게시글 주소입니다.'));
     }
 }
-function clearErrors(prefix = 'community', keys = ['nickname', 'title', 'exercise_type', 'content']) {
+function clearErrors(prefix = 'community', keys = ['nickname', 'title', 'exercise_type', 'content', 'record_id']) {
     for (const key of keys) {
         $(`${prefix}-error-${key}`).textContent = '';
         $(`${prefix}-${key}`).removeAttribute('aria-invalid');
@@ -215,6 +267,7 @@ $('community-form').addEventListener('submit', async event => {
     const data = Object.fromEntries(new FormData(event.currentTarget));
     const errors = validateText(data, [['nickname', '닉네임', 20], ['title', '제목', 100], ['content', '내용', 5000]]);
     if (!labels[data.exercise_type]) errors.exercise_type = '운동 종류를 선택해 주세요.';
+    data.record_id = data.record_id || null;
     if (Object.keys(errors).length) { fieldErrors(errors); return; }
     const serialized = JSON.stringify(data);
     if (!pending || pending.serialized !== serialized) pending = {serialized, key: requestKey()};

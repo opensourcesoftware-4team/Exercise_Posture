@@ -33,6 +33,8 @@ export const getPost = id => request(`/posts/${id}`);
 export const createPost = (post, key) => request('/posts', {
     method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify(post),
 });
+// 운동 기록 API(records.py)는 기존 대시보드와 같은 것을 그대로 쓴다. 최신순으로 온다.
+export const listRecords = () => request('/records');
 export const listComments = postId => request(`/posts/${postId}/comments`);
 export const createComment = (postId, comment, key) => request(`/posts/${postId}/comments`, {
     method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify(comment),
