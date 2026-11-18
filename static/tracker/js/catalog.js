@@ -67,6 +67,8 @@ export const INDICATOR_LABELS = {
   armLean: "팔 기울기",
   neck: "목 정렬",
   referenceTorso: "마네킹 대비 상체",
+  referenceHead: "마네킹 대비 고개",
+  referenceElbow: "마네킹 대비 팔꿈치",
 };
 
 // 연습 모드 권유형 힌트 (추가 기능 F1). 위에 있을수록 먼저 보여 주고, 한 번에 하나만 보인다.
@@ -76,7 +78,7 @@ export const PRACTICE_HINTS = {
     { keys: ["heelLift"], text: "뒤꿈치를 바닥에 붙여 볼까요?" },
     { keys: ["torsoLean"], text: "가슴을 조금만 세워 볼까요?" },
     { keys: ["shinLean"], text: "엉덩이를 조금 뒤로 빼 볼까요?" },
-    // 마네킹 대비 상체 안내 (torso-guide.js): 근거 있는 판정 힌트 다음에 보여 준다
+    // 마네킹 대비 안내 (reference-guide.js): 근거 있는 판정 힌트 다음에 보여 준다
     { keys: ["torsoUpright"], text: "상체를 마네킹처럼 조금 더 숙여 볼까요?" },
     { keys: ["torsoForward"], text: "가슴을 마네킹만큼 세워 볼까요?" },
     { keys: ["partialRep"], text: "조금만 더 앉아 볼까요?" },
@@ -84,12 +86,18 @@ export const PRACTICE_HINTS = {
   pushup: [
     { keys: ["coreDrop", "coreHigh"], text: "배에 힘을 주고 몸을 일직선으로 만들어 볼까요?" },
     { keys: ["handForward", "handBackward"], text: "손을 어깨 바로 아래에 두어 볼까요?" },
+    // 마네킹 대비 고개 (reference-guide.js)
+    { keys: ["headDrop"], text: "고개를 마네킹만큼 들어 몸과 일직선으로 맞춰 볼까요?" },
+    { keys: ["headHigh"], text: "고개를 마네킹만큼 내려 몸과 일직선으로 맞춰 볼까요?" },
     { keys: ["partialRepShallow"], text: "가슴을 조금 더 내려 볼까요?" },
     { keys: ["partialRepLockout"], text: "팔을 끝까지 펴 볼까요?" },
   ],
   plank: [
     { keys: ["hipDrop", "hipHigh"], text: "엉덩이를 몸과 일직선으로 맞춰 볼까요?" },
     { keys: ["neckDrop", "neckHigh"], text: "시선을 바닥 조금 앞쪽에 두어 볼까요?" },
+    // 마네킹 대비 팔꿈치 (reference-guide.js): 팔꿈치가 어깨보다 앞(머리 쪽)이면 어깨를 앞으로, 뒤(발 쪽)면 뒤로 보낸다
+    { keys: ["elbowAhead"], text: "어깨를 조금 앞으로 보내 마네킹처럼 팔꿈치 바로 위에 둬 볼까요?" },
+    { keys: ["elbowBehind"], text: "어깨를 조금 뒤로 보내 마네킹처럼 팔꿈치 바로 위에 둬 볼까요?" },
   ],
 };
 
