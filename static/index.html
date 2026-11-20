@@ -326,6 +326,25 @@
             <div id="community-detail" hidden>
                 <button id="community-back" type="button" class="community-button community-secondary">← 목록으로</button>
                 <article id="community-detail-content"></article>
+                <section id="community-comments" aria-labelledby="community-comments-title" hidden>
+                    <div class="community-comments-head">
+                        <h3 id="community-comments-title">댓글 <span id="community-comment-count"></span></h3>
+                        <button id="community-comments-refresh" type="button" aria-label="댓글 새로고침">↻ 새로고침</button>
+                    </div>
+                    <ol id="community-comment-list"></ol>
+                    <form id="community-comment-form" novalidate>
+                        <fieldset id="community-comment-fields">
+                            <label for="community-comment-nickname">닉네임 <span>필수 · 최대 20자</span></label>
+                            <input id="community-comment-nickname" name="nickname" placeholder="닉네임" autocomplete="nickname" required aria-describedby="community-comment-error-nickname">
+                            <p id="community-comment-error-nickname" class="community-field-error"></p>
+                            <label for="community-comment-content">댓글 <span>필수 · 최대 1,000자</span></label>
+                            <textarea id="community-comment-content" name="content" rows="3" placeholder="경험이나 자세 교정 팁을 나눠 주세요." required aria-describedby="community-comment-error-content"></textarea>
+                            <div class="community-counter-row"><p id="community-comment-error-content" class="community-field-error"></p><span id="community-comment-counter">0 / 1,000</span></div>
+                            <div class="community-form-actions"><button id="community-comment-submit" type="submit" class="community-button community-primary">댓글 등록</button></div>
+                        </fieldset>
+                        <p id="community-comment-status" role="status" aria-live="polite"></p>
+                    </form>
+                </section>
             </div>
         </section>
     </main>

@@ -33,6 +33,10 @@ export const getPost = id => request(`/posts/${id}`);
 export const createPost = (post, key) => request('/posts', {
     method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify(post),
 });
+export const listComments = postId => request(`/posts/${postId}/comments`);
+export const createComment = (postId, comment, key) => request(`/posts/${postId}/comments`, {
+    method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify(comment),
+});
 
 export function requestKey() {
     // HTTP LAN 주소에서도 사용할 수 있도록 randomUUID 대신 getRandomValues 사용.
