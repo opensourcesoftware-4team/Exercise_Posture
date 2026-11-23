@@ -115,19 +115,23 @@ test("스쿼트: F4로 잰 측정값을 그대로 넣을 수 있다", () => {
 });
 
 // 체형 3세트 결과 스냅샷 (명세 12장). 설정값(SHIN_MAX 등)이나 계산을 바꾸면 이 값을 다시 만든다.
-// 값: thetaMax, 깊이 40°의 정강이·상체 기울기 (소수 첫째 자리)
+// 값: thetaMax, 깊이 40°·70°의 정강이·상체 기울기 (소수 첫째 자리). 긴 다리는 70°에서 정강이가 상한(40°)에 걸려 상체를 더 숙인다
 const SQUAT_SNAPSHOT = {
-  standard: { thetaMax: 56, shin: 25.7, torso: 25.7 },
-  shortLegs: { thetaMax: 63, shin: 24.7, torso: 24.7 },
-  longLegs: { thetaMax: 49, shin: 27.8, torso: 27.8 },
+  standard: { thetaMax: 90, at40: { shin: 25.7, torso: 25.7 }, at70: { shin: 37.3, torso: 37.3 } },
+  shortLegs: { thetaMax: 90, at40: { shin: 24.7, torso: 24.7 }, at70: { shin: 35.1, torso: 35.1 } },
+  longLegs: { thetaMax: 77, at40: { shin: 27.8, torso: 27.8 }, at70: { shin: 40, torso: 42.4 } },
 };
 
 test("스쿼트: 짧은 다리·긴 다리·표준 체형의 결과가 스냅샷과 같다", () => {
   const round = (value) => Math.round(value * 10) / 10;
+  const at = (reference, theta) => {
+    const { shin, torso } = reference.angles(theta);
+    return { shin: round(shin), torso: round(torso) };
+  };
   for (const [name, body] of Object.entries(SQUAT_BODIES)) {
     const reference = createSquatReference(body);
-    const { shin, torso } = reference.angles(40);
-    assert.deepEqual({ thetaMax: reference.thetaMax, shin: round(shin), torso: round(torso) }, SQUAT_SNAPSHOT[name], name);
+    const actual = { thetaMax: reference.thetaMax, at40: at(reference, 40), at70: at(reference, 70) };
+    assert.deepEqual(actual, SQUAT_SNAPSHOT[name], name);
   }
 });
 

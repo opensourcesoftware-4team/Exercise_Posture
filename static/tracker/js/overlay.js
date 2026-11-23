@@ -22,6 +22,7 @@ const SEGMENTS = {
     ["elbow", "wrist"],
   ],
   neck: [["ear", "shoulder"]],
+  referenceTorso: [], // 마네킹 대비 상체는 사용자 뼈대가 아니라 정답 마네킹의 몸통을 칠한다 (drawReference)
 };
 
 // 마네킹에서 지표마다 색칠할 부위 (mannequin.js의 부위 이름). 선 뼈대의 SEGMENTS와 같은 곳이다
@@ -31,7 +32,16 @@ const PARTS = {
   bodyLine: ["torso", "thigh", "shank"],
   armLean: ["upperArm", "forearm"],
   neck: ["head"],
+  referenceTorso: [],
 };
+
+// 정답 마네킹에서 지표마다 주황으로 칠할 부위 (마네킹 대비 상체 안내)
+const REFERENCE_PARTS = { referenceTorso: ["torso"] };
+
+// 정답 마네킹에서 주황으로 칠할 부위: 정답 마네킹과 비교하는 지표가 초록이 아닌 부위
+export function referenceWarnParts(indicators) {
+  return indicators.filter((item) => item.stage !== "good").flatMap((item) => REFERENCE_PARTS[item.key] ?? []);
+}
 
 // 선 굵기: 영상 크기에 맞춘다
 const lineWidthOf = (context) => Math.max(4, context.canvas.width / 160);
@@ -113,6 +123,8 @@ export function drawOverlay(context, exercise, view, mode, mannequin) {
 }
 
 // 정답 뼈대 (F6·F8): 반투명 초록 마네킹. 사용자 뼈대보다 먼저(아래에) 그린다. glowing이면 잠깐 밝게 그린다
-export function drawReference(context, points, glowing) {
-  drawMannequin(context, points, () => STAGE_COLORS.good, glowing ? REFERENCE_GLOW_ALPHA : REFERENCE_ALPHA);
+// warnParts: 주황으로 칠할 부위 (마네킹 대비 상체가 어긋나면 몸통)
+export function drawReference(context, points, glowing, warnParts = []) {
+  const colorOf = (part) => (warnParts.includes(part) ? STAGE_COLORS.warn : STAGE_COLORS.good);
+  drawMannequin(context, points, colorOf, glowing ? REFERENCE_GLOW_ALPHA : REFERENCE_ALPHA);
 }

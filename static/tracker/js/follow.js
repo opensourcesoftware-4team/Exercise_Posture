@@ -41,6 +41,8 @@ export function createReferenceFollow(exercise, body) {
       references = build(shinMax ?? SHIN_MAX);
     },
     poseAt, // 따라 하기(F7)도 같은 정답 자세를 쓴다
+    // 스쿼트만: 깊이 depth(°)의 정답 기울기 { thigh, shin, torso } (°). 깊이는 0~thetaMax로 자른다 (마네킹 대비 상체 안내)
+    angles: (depth) => references[body.facing].angles(depth),
     // view: session.processFrame 결과. 판정 중인 프레임이면 지금 보는 방향·발목·깊이에 맞춘 정답 관절 좌표(px), 아니면 null
     pose(view) {
       if (!view.points) return null;

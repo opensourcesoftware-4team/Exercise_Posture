@@ -32,7 +32,7 @@ test("스쿼트: 사용자의 다듬은 허벅지 각과 지금 발목에 맞춘
   const reference = createSquatReference(SQUAT_SIZE);
   assert.equal(follow.thetaMax, reference.thetaMax);
   const ankle = { x: 512.3, y: 601.7 };
-  for (const thigh of [0, 20, 45, reference.thetaMax, 89]) {
+  for (const thigh of [0, 20, 45, reference.thetaMax, reference.thetaMax + 5]) {
     const pose = follow.pose(judging({ thigh }, { ankle }));
     assert.deepEqual(pose, reference.pose(ankle, thigh));
     assert.deepEqual(pose.ankle, ankle); // 발목이 겹친다 (0px)
@@ -40,7 +40,10 @@ test("스쿼트: 사용자의 다듬은 허벅지 각과 지금 발목에 맞춘
   // 깊이가 같으면 정답 뼈대도 그대로이고, 더 앉으면 엉덩이가 내려간다
   assert.deepEqual(follow.pose(judging({ thigh: 30 })), follow.pose(judging({ thigh: 30 })));
   assert.ok(follow.pose(judging({ thigh: 40 })).hip.y > follow.pose(judging({ thigh: 30 })).hip.y);
-  assert.deepEqual(follow.pose(judging({ thigh: 89 })), follow.pose(judging({ thigh: reference.thetaMax })));
+  assert.deepEqual(
+    follow.pose(judging({ thigh: reference.thetaMax + 5 })),
+    follow.pose(judging({ thigh: reference.thetaMax })),
+  );
 });
 
 test("측정 뒤 반대쪽으로 돌아서면 정답 뼈대도 발목을 축으로 좌우가 뒤집힌다", () => {
