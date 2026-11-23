@@ -63,9 +63,12 @@ async function loadRecordOptions() {
             select.append(new Option(recordSummary({...record, started_at: record.startedAt}), record.id));
         }
         if ([...select.options].some(option => option.value === selected)) select.value = selected;
-    } catch {
+    } catch (error) {
         if (token !== recordsLoading) return;
-        select.replaceChildren(new Option('첨부하지 않음 (운동 기록을 불러오지 못했어요)', ''));
+        // 403: 다른 기기에서 접속함. 운동 기록은 서버 PC에서만 첨부할 수 있다.
+        select.replaceChildren(new Option(error.status === 403
+            ? '첨부하지 않음 (운동 기록 첨부는 서버 PC에서만 할 수 있어요)'
+            : '첨부하지 않음 (운동 기록을 불러오지 못했어요)', ''));
     } finally {
         if (token === recordsLoading) select.disabled = false;
     }

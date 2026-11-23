@@ -15,8 +15,10 @@ import socket
 import sys
 from pathlib import Path
 
+from flask import jsonify, request
+
 import storage
-from app import create_app as create_community_app
+from app import create_app as create_community_app, is_local_request
 from guide import guide_bp
 from records import records_bp
 
@@ -38,6 +40,13 @@ def create_app(config=None):
     app = create_community_app(config)
     app.register_blueprint(records_bp)
     app.register_blueprint(guide_bp)
+
+    # 운동 기록·통계·가이드 API는 서버 PC에서만 쓴다. 카메라 측정이 서버 PC에서만 되므로 기록의 주인은 서버 PC 사용자이고,
+    # 같은 Wi-Fi의 다른 기기는 커뮤니티만 함께 쓴다 (제안서 6장 '데이터·공유').
+    @app.before_request
+    def personal_api_local_only():
+        if request.blueprint in ("records", "guide") and not is_local_request():
+            return jsonify(error="운동 기록은 서버 PC에서만 볼 수 있습니다. 같은 Wi-Fi의 다른 기기는 커뮤니티를 이용해 주세요."), 403
 
     for name, page in PAGES.items():
         app.add_url_rule(f"/{name}/", f"{name}_page", lambda page=page: app.send_static_file(page))

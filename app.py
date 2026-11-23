@@ -1,3 +1,4 @@
+import ipaddress
 import os
 import sqlite3
 from datetime import datetime, timezone
@@ -25,6 +26,14 @@ def text_fields(payload, specs):
             fields[key] = f'{label}은(는) 공백을 제외한 1~{limit:,}자로 입력해 주세요.'
         values[key] = value
     return fields, values
+
+
+def is_local_request():
+    """요청이 서버 PC 자신(127.0.0.1, ::1)에서 왔는지. 운동 기록은 서버 PC 사용자의 것으로 본다."""
+    try:
+        return ipaddress.ip_address(request.remote_addr or '').is_loopback
+    except ValueError:
+        return False
 
 
 def find_record(record_id):
@@ -123,7 +132,9 @@ def create_app(config=None):
         values['exercise_type'] = exercise
         # 운동 기록 첨부(선택): 화면이 보낸 수치는 믿지 않고, 서버에 저장된 기록을 id로 찾아 복사한다.
         record, record_id = None, payload.get('record_id')
-        if record_id not in (None, ''):
+        if record_id not in (None, '') and not is_local_request():
+            fields['record_id'] = '운동 기록 첨부는 서버 PC에서 접속한 경우에만 할 수 있어요.'
+        elif record_id not in (None, ''):
             try:
                 record_id = str(UUID(record_id))
             except (ValueError, TypeError, AttributeError):
