@@ -1,12 +1,90 @@
 import json
+import re
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
+DEFAULT_VIDEOS_PATH = BASE_DIR / "data" / "videos.json"
+DEFAULT_ERROR_CONTENT_PATH = BASE_DIR / "data" / "error_content.json"
+
+
+def to_youtube_embed_url(url):
+    """
+    일반 유튜브 링크(watch?v=, youtu.be/, shorts/)를 iframe 재생용 embed URL로 변환합니다.
+    유튜브 링크가 아니거나 비어 있으면 빈 문자열("")을 반환합니다.
+    """
+    if not url or not isinstance(url, str):
+        return ""
+
+    if "youtube.com/embed/" in url:
+        return url
+
+    pattern = r"(?:v=|\/youtu\.be\/|\/embed\/|\/shorts\/)([a-zA-Z0-9_-]{11})"
+    match = re.search(pattern, url)
+    if match:
+        video_id = match.group(1)
+        return f"https://www.youtube.com/embed/{video_id}"
+
+    return ""
+
+
+def get_video_section_html(video_url):
+    """
+    유튜브 링크가 있으면 iframe 플레이어 HTML을 반환하고,
+    없거나 준비되지 않은 경우 '가이드 영상 준비 중' 안내 문구 HTML을 반환합니다.
+    """
+    embed_url = to_youtube_embed_url(video_url)
+    if embed_url:
+        return (
+            f'<div class="video-container">'
+            f'<iframe src="{embed_url}" title="자세 교정 가이드 영상" '
+            f'frameborder="0" allow="accelerometer; autoplay; clipboard-write; '
+            f'encrypted-media; gyroscope; picture-in-picture" allowfullscreen>'
+            f'</iframe></div>'
+        )
+    return '<p class="video-placeholder">가이드 영상 준비 중</p>'
+
+
+def load_videos_catalog(videos_path=DEFAULT_VIDEOS_PATH):
+    """
+    영상 데이터 파일(videos.json)을 읽어 id를 키로 하는 딕셔너리로 반환합니다.
+    """
+    with open(videos_path, "r", encoding="utf-8") as f:
+        raw = json.load(f)
+
+    items = raw.get("videos", raw) if isinstance(raw, dict) else raw
+    catalog = {}
+    for item in items:
+        vid = item.get("id")
+        if vid:
+            url = item.get("url", "")
+            catalog[vid] = {
+                "id": vid,
+                "exercise": item.get("exercise", ""),
+                "body_part": item.get("body_part", ""),
+                "category": item.get("category", ""),
+                "title": item.get("title", ""),
+                "url": url,
+                "embed_url": to_youtube_embed_url(url),
+                "video_html": get_video_section_html(url),
+            }
+    return catalog
+
+
+def load_error_content(content_path=DEFAULT_ERROR_CONTENT_PATH):
+    """
+    오답 콘텐츠 데이터 파일(error_content.json)을 읽어 반환합니다.
+    """
+    with open(content_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
 
 def get_all_errors_info(data_source):
     """
-    파일 경로(str), Flask API 응답 데이터(list), 또는 백엔드 storage.load_records() 결과(list)를 받아
+    파일 경로(str/Path), Flask API 응답 데이터(list), 또는 백엔드 storage.load_records() 결과(list)를 받아
     모든 운동의 오답 횟수를 집계하고 내림차순으로 정렬하여 반환합니다.
     """
-    if isinstance(data_source, str):
-        with open(data_source, 'r', encoding='utf-8') as f:
+    if isinstance(data_source, (str, Path)):
+        with open(data_source, "r", encoding="utf-8") as f:
             data = json.load(f)
     else:
         data = data_source
@@ -27,104 +105,100 @@ def get_all_errors_info(data_source):
     sorted_errors = sorted(error_counts.items(), key=lambda x: x[1], reverse=True)
     return sorted_errors
 
-# 운동별 가이드 데이터 딕셔너리 (shinLean 리뷰어 피드백 반영 완료)
-error_info = {
-    "squat": {
-        "torsoLean": {
-            "description": "현재 스쿼트 동작 시 상체가 앞으로 너무 많이 숙여지고 있습니다!",
-            "cause": "배와 허리에 버티는 힘이 부족하거나, 발목과 골반이 뻣뻣해서 중심을 잡으려고 상체를 앞으로 숙이게 됩니다.",
-            "solution": "내려가기 전에 숨을 크게 들이마셔 배에 힘을 단단히 주고, 시선은 정면을 보며 가슴을 펴주세요. 일어날 때는 발바닥 전체로 바닥을 수직으로 밀어내듯 일어나야 합니다.",
-            "video": "assets/videos/squat_torso_lean_guide.mp4"
-        },
-        "shinLean": {
-            "description": "현재 스쿼트 동작 시 상체에 비해 정강이가 많이 기울어, 무릎 위주로 앉고 있습니다!", # 피드백 반영 문구
-            "cause": "엉덩이를 뒤로 빼면서 앉지 않고 무릎부터 먼저 굽혀서 몸무게가 앞쪽으로 쏠리기 때문입니다.",
-            "solution": "상체에 비해 정강이가 많이 기울어, 무릎 위주로 앉고 있어요. 엉덩이를 뒤로 빼며 고관절을 먼저 접어보세요. 무게중심을 발가락이 아닌 발바닥 가운데와 뒤꿈치에 두어야 합니다.", # 구체적 교정 팁 반영
-            "video": "assets/videos/squat_shin_lean_guide.mp4"
-        },
-        "heelLift": {
-            "description": "현재 스쿼트 동작 시 발뒤꿈치가 바닥에서 들리고 있습니다!",
-            "cause": "종아리와 발목이 뻣뻣하거나 몸무게가 발 앞쪽으로 쏠려 있기 때문입니다.",
-            "solution": "운동 전에 종아리와 발목을 충분히 풀어주고, 발끝을 바깥쪽으로 살짝(15~30도) 벌려 서보세요. 앉았다 일어나는 내내 엄지발가락·새끼발가락·발뒤꿈치 세 점으로 바닥을 꾹 누르는 느낌을 유지하세요.",
-            "video": "assets/videos/squat_heel_lift_guide.mp4"
-        },
-        "partialRep": {
-            "description": "현재 스쿼트 동작 시 충분히 깊게 앉지 못하고 있습니다!",
-            "cause": "골반과 발목이 뻣뻣하거나 허벅지 힘이 부족해서 끝까지 앉기 힘들기 때문입니다.",
-            "solution": "발을 어깨너비보다 조금 넓게 벌리고, 무릎을 발끝 방향으로 벌려 골반이 내려갈 공간을 만들어 주세요. 뒤에 낮은 의자를 두고 엉덩이가 닿을랑 말랑 할 정도(허벅지가 바닥과 수평이 될 때)까지 천천히 앉는 연습을 해보세요.",
-            "video": "assets/videos/squat_partial_rep_guide.mp4"
-        },
-        "kneeValgus": {
-            "description": "현재 스쿼트 동작 시 무릎이 안쪽으로 모이고 있습니다!",
-            "cause": "엉덩이 옆쪽 힘이 부족해서 앉았다 일어날 때 무릎을 바깥쪽으로 버텨주지 못하기 때문입니다.",
-            "solution": "양발로 바닥을 양옆으로 찢는다는 느낌으로 힘을 주고, 앉을 때와 일어날 때 모두 무릎이 두 번째 발가락 방향을 향하도록 바깥쪽으로 계속 밀어내세요.",
-            "video": "assets/videos/squat_knee_valgus_guide.mp4"
-        }
-    },
-    "pushup": {
-        "coreDrop": {
-            "description": "현재 푸시업 동작 시 허리와 배가 아래로 처지고 있습니다!",
-            "cause": "배와 엉덩이에 힘을 꽉 주지 못해 몸이 일직선으로 유지되지 않기 때문입니다.",
-            "solution": "배에 힘을 단단히 주고 양쪽 엉덩이를 꽉 조여 머리부터 발뒤꿈치까지 하나의 단단한 나무판자처럼 일직선을 만드세요. 버티기 힘들다면 무릎을 바닥에 대고 정확한 일자 자세부터 연습해 보세요.",
-            "video": "assets/videos/pushup_core_drop_guide.mp4"
-        },
-        "coreHigh": {
-            "description": "현재 푸시업 동작 시 엉덩이가 위로 솟고 있습니다!",
-            "cause": "가슴과 팔의 힘이 부족해서 무의식적으로 엉덩이를 들어 올려 쉽게 버티려고 하기 때문입니다.",
-            "solution": "어깨가 손목 바로 위에 오도록 몸을 살짝 앞으로 이동시키고, 엉덩이를 내려 어깨-엉덩이-발목이 비스듬한 일직선이 되도록 맞춘 상태에서 팔을 굽히세요.",
-            "video": "assets/videos/pushup_core_high_guide.mp4"
-        },
-        "handForward": {
-            "description": "현재 푸시업 동작 시 손을 어깨보다 너무 앞쪽에 짚고 있습니다!",
-            "cause": "시작할 때 손을 어깨 바로 아래에 두지 않아서 어깨에 무리가 가는 상태입니다.",
-            "solution": "시작 자세를 잡을 때 손을 몸 쪽으로 한 뼘 정도 당겨서, 옆에서 봤을 때 어깨 바로 아래에 손목이 수직으로 놓이도록 짚으세요.",
-            "video": "assets/videos/pushup_hand_forward_guide.mp4"
-        },
-        "handBackward": {
-            "description": "현재 푸시업 동작 시 손을 어깨보다 너무 뒤쪽(배 쪽)에 짚고 있습니다!",
-            "cause": "손을 몸 안쪽으로 너무 당겨 짚어서 손목이 많이 꺾이고 몸이 앞으로 쏠리기 때문입니다.",
-            "solution": "손을 가슴 옆 라인(어깨 바로 아래 위치)으로 살짝 앞으로 옮겨 짚어, 내려갔을 때 팔뚝이 바닥과 수직에 가깝게 되도록 위치를 조절하세요.",
-            "video": "assets/videos/pushup_hand_backward_guide.mp4"
-        },
-        "partialRep": {
-            "description": "현재 푸시업 동작 시 팔을 충분히 굽히지 못하고 있습니다!",
-            "cause": "가슴과 팔의 힘이 부족해서 몸을 바닥 가까이 끝까지 내리지 못하기 때문입니다.",
-            "solution": "가슴과 바닥 사이에 주먹 하나가 들어갈 정도까지 팔꿈치를 90도 가까이 충분히 굽혀 내려가세요. 팔 힘이 부족하다면 무릎을 바닥에 대거나 책상을 짚고 수행하여 끝까지 내려갔다가 올라오는 연습을 먼저 해보세요.",
-            "video": "assets/videos/pushup_partial_rep_guide.mp4"
-        }
-    },
-    "plank": {
-        "hipDrop": {
-            "description": "현재 플랭크 동작 시 엉덩이가 아래로 처지고 있습니다!",
-            "cause": "배와 엉덩이에 힘이 풀려서 몸을 일자로 버티지 못하고 허리에 무게가 실리기 때문입니다.",
-            "solution": "배꼽을 등 쪽으로 당긴다는 느낌으로 배에 힘을 주고 엉덩이와 허벅지를 꽉 조이세요. 양 팔꿈치를 발끝 쪽으로 살짝 당기듯 바닥을 밀어내며 엉덩이를 등 높이에 맞춰 들어 올리세요.",
-            "video": "assets/videos/plank_hip_drop_guide.mp4"
-        },
-        "hipHigh": {
-            "description": "현재 플랭크 동작 시 엉덩이가 위로 솟고 있습니다!",
-            "cause": "배에 들어가는 힘을 피하려고 엉덩이를 높이 들어 어깨와 다리 힘으로만 버티려 하기 때문입니다.",
-            "solution": "가슴을 양 팔꿈치 사이로 살짝 앞으로 보내면서 엉덩이를 천천히 내려, 뒤통수·등·엉덩이·발뒤꿈치가 평평한 일직선이 되도록 맞추고 배의 힘으로 버티세요.",
-            "video": "assets/videos/plank_hip_high_guide.mp4"
-        },
-        "neckDrop": {
-            "description": "현재 플랭크 동작 시 고개가 아래로 푹 떨어지고 있습니다!",
-            "cause": "머리와 등을 일직선으로 유지하지 못하고 시선을 발이나 배 쪽으로 두어 목에 힘이 풀렸기 때문입니다.",
-            "solution": "시선을 발쪽이 아닌 양손(주먹) 사이의 바닥에 고정하고, 턱을 목 쪽으로 살짝 당겨 뒤통수가 등과 나란히 일직선이 되도록 머리를 들어 올리세요.",
-            "video": "assets/videos/plank_neck_drop_guide.mp4"
-        },
-        "neckHigh": {
-            "description": "현재 플랭크 동작 시 고개를 너무 높이 들고 있습니다!",
-            "cause": "바닥을 보지 않고 앞이나 위를 쳐다봐서 목 뒤쪽과 어깨에 불필요한 힘이 들어가기 때문입니다.",
-            "solution": "정면이나 위를 올려다보지 말고 시선을 양손 사이 바닥으로 자연스럽게 내려, 뒷목이 길어진다는 느낌으로 머리와 척추를 일직선으로 유지하세요.",
-            "video": "assets/videos/plank_neck_high_guide.mp4"
-        }
-    }
-}
 
-# --- 실행 및 연동 브렌치 테스트용 ---
+def get_routine_by_count(info, count):
+    """
+    오류 발생 횟수(1번, 2~4번, 5번 이상)에 따라 해당 오류의 맞춤형 교정 루틴을 반환합니다.
+    """
+    routines = info.get("routines", {})
+    if count >= 5:
+        return {
+            "level": "🔴 5회 이상 (집중 교정 루틴 — 근본 원인 해결 및 패턴 재교육)",
+            "routine": routines.get("5_plus", "기본 자세 가이드를 다시 확인해 주세요."),
+        }
+    elif 2 <= count <= 4:
+        return {
+            "level": "🟡 2~4회 (보완 교정 루틴 — 가동성 확보 및 타겟 근육 활성화)",
+            "routine": routines.get("2_4", "기본 자세 가이드를 다시 확인해 주세요."),
+        }
+    else:  # count == 1
+        return {
+            "level": "🟢 1회 (자세 인지 루틴 — 즉시 교정 및 코칭 큐 리허설)",
+            "routine": routines.get("1", "기본 자세 가이드를 다시 확인해 주세요."),
+        }
+
+
+def build_guide_feedback_list(
+    data_source,
+    videos_path=DEFAULT_VIDEOS_PATH,
+    content_path=DEFAULT_ERROR_CONTENT_PATH,
+):
+    """
+    백엔드 API(/api/guide) 또는 프론트엔드 렌더링에 바로 전달할 수 있도록
+    각 오류별 설명, 원인, 교정법, 횟수별 루틴, 유튜브 임베드 URL 및 HTML을 리스트로 반환합니다.
+    """
+    videos_catalog = load_videos_catalog(videos_path)
+    error_content = load_error_content(content_path)
+    all_errors = get_all_errors_info(data_source)
+    feedback_list = []
+
+    for idx, ((exercise, error_name), count) in enumerate(all_errors, start=1):
+        info = error_content.get(exercise, {}).get(error_name, {
+            "body_part": "unknown",
+            "type": "general",
+            "description": "현재 알 수 없는 자세 오류가 발생하고 있습니다!",
+            "cause": "정확한 원인을 파악할 수 없습니다.",
+            "solution": "기본 자세 가이드를 다시 확인해 주세요.",
+            "reference": "참고 문헌 없음",
+            "routines": {},
+            "video_id": "",
+        })
+
+        prescription = get_routine_by_count(info, count)
+        video_id = info.get("video_id", "")
+        video_meta = videos_catalog.get(video_id, {
+            "id": video_id,
+            "exercise": exercise,
+            "body_part": info.get("body_part", ""),
+            "category": info.get("type", ""),
+            "title": "",
+            "url": "",
+            "embed_url": "",
+            "video_html": get_video_section_html(""),
+        })
+
+        raw_video_url = video_meta.get("url", "")
+        embed_url = video_meta.get("embed_url", "")
+        video_html = video_meta.get("video_html", get_video_section_html(raw_video_url))
+
+        feedback_list.append({
+            "rank": idx,
+            "is_top_error": idx == 1,
+            "exercise": exercise,
+            "error_name": error_name,
+            "body_part": info.get("body_part", ""),
+            "type": info.get("type", ""),
+            "count": count,
+            "description": info["description"],
+            "cause": info["cause"],
+            "solution": info["solution"],
+            "reference": info.get("reference", ""),
+            "routine_level": prescription["level"],
+            "routine": prescription["routine"],
+            "video_id": video_id,
+            "video_meta": video_meta,
+            "video": raw_video_url,
+            "embed_url": embed_url,
+            "video_html": video_html,
+        })
+
+    return feedback_list
+
+
+# --- 실행 및 연동 브랜치 테스트용 ---
 if __name__ == "__main__":
     # 방법 A: 기존처럼 로컬 JSON 파일로 테스트할 때
-    # all_errors = get_all_errors_info('session-example.json')
+    # feedback_results = build_guide_feedback_list('session-example.json')
 
     # 방법 B: 팀원들의 Flask API(GET /api/records) 응답 데이터나 백엔드 storage.load_records() 결과를 받을 때
     mock_api_response = [
@@ -137,36 +211,31 @@ if __name__ == "__main__":
             "accuracy": 71,
             "errors": {
                 "squat": {
-                    "torsoLean": 1,
+                    "torsoLean": 5,   # 5회 이상 루틴 테스트
                     "shinLean": 0,
-                    "heelLift": 1,
-                    "partialRep": 2,
+                    "heelLift": 1,    # 1회 루틴 테스트
+                    "partialRep": 3,  # 2~4회 루틴 테스트
                     "kneeValgus": 0
                 }
             }
         }
     ]
-    
-    all_errors = get_all_errors_info(mock_api_response)
 
-    if all_errors:
-        for idx, ((exercise, error_name), count) in enumerate(all_errors, start=1):
-            info = error_info.get(exercise, {}).get(error_name, {
-                "description": "현재 알 수 없는 자세 오류가 발생하고 있습니다!",
-                "cause": "정확한 원인을 파악할 수 없습니다.",
-                "solution": "기본 자세 가이드를 다시 확인해 주세요.",
-                "video": "가이드 영상 없음"
-            })
-            
-            prefix = "[최다 발생 오류]" if idx == 1 else f"[추가 발생 오류 {idx - 1}]"
-            print(f"{prefix} (총 {count}회)")
-            print(f"- 발생한 오류: {info['description']}")
-            print(f"- 발생 원인: {info['cause']}")
-            print(f"- 자세 교정 방법: {info['solution']}")
-            
-            # 최다 발생 오류(1순위)인 경우에만 교정 가이드 영상 안내 출력
-            if idx == 1:
-                print(f"- 교정 가이드 영상: {info['video']}")
+    feedback_results = build_guide_feedback_list(mock_api_response)
+
+    if feedback_results:
+        for item in feedback_results:
+            prefix = "[최다 발생 오류]" if item["is_top_error"] else f"[추가 발생 오류 {item['rank'] - 1}]"
+            print(f"{prefix} ({item['exercise']} / {item['body_part']} - {item['error_name']}, 총 {item['count']}회)")
+            print(f"- 발생한 오류: {item['description']}")
+            print(f"- 발생 원인: {item['cause']}")
+            print(f"- 자세 교정 방법: {item['solution']}")
+            print(f"- 처방 단계: {item['routine_level']}")
+            print(f"- 맞춤형 교정 루틴: {item['routine']}")
+            print(f"- 참고 문헌: {item['reference']}")
+            print(f"- 영상 ID: {item['video_id']}")
+            print(f"- 유튜브 임베드 주소: {item['embed_url'] if item['embed_url'] else '가이드 영상 준비 중'}")
+            print(f"- 화면 렌더링 HTML: {item['video_html']}")
             print()
     else:
         print("모든 자세가 정확합니다. 운동을 잘하고 계십니다.")
