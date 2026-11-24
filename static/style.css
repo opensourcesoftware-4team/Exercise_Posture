@@ -1,0 +1,163 @@
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #020617; /* --bg-primary 로 통일 */
+    color: #f8fafc; /* --text-main */
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+}
+
+header {
+    width: 100%;
+    padding: 1.5rem 4rem;
+    text-align: center;
+    background: rgba(30, 41, 59, 0.7); /* --glass */
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+header h1 {
+    font-family: 'Urbanist', sans-serif;
+    font-weight: 800;
+    font-size: 1.8rem;
+    letter-spacing: -0.5px;
+}
+
+header h1 span {
+    color: #0ea5e9; /* --accent */
+}
+
+/* 2. 대시보드 메인 인프라 */
+.dashboard {
+    display: flex;
+    gap: 30px; /* 공백 확장 */
+    margin-top: 40px;
+    width: 95%;
+    max-width: 1280px; /* 피치덱 규격과 정렬 일치 */
+    align-items: start;
+}
+
+/* 3. 비디오 컨테이너 고도화 (레이아웃 핵심 유지 + 디자인 래핑) */
+.video-container {
+    position: relative;
+    width: 640px;
+    height: 480px;
+    background-color: #020617;
+    border: 1px solid rgba(255, 255, 255, 0.08); /* 조잡한 3px 보더 제거 */
+    border-radius: 20px; /* 부드러운 라운딩 통일 */
+    overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(14, 165, 233, 0.05);
+}
+
+/* 절대 좌표 및 거울 모드 정밀 보존 */
+#webcam, #output_canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transform: scaleX(-1); /* 거울 모드 유지 */
+}
+
+/* 측면 가이드라인 UI 텍스트 디자인 고도화 */
+.guideline {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); 
+    color: rgba(255, 255, 255, 0.15);
+    font-family: 'Urbanist', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    pointer-events: none;
+    text-align: center;
+    text-transform: uppercase;
+    border: 2px dashed rgba(255, 255, 255, 0.1);
+    padding: 20px 40px;
+    border-radius: 12px;
+}
+
+/* 4. 컨트롤 및 상태 지표 컴포넌트 */
+.controls {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* 프리미엄 카드 에스테틱 적용 */
+.stat-box {
+    background-color: #0f172a; /* --bg-secondary */
+    padding: 25px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-left: 5px solid #10b981; /* 정상 상태: 에메랄드 그린 */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 경고(오답) 상태 변이 */
+.stat-box.warning {
+    border-left: 5px solid #ef4444; /* 경고 상태: 인텐시브 레드 */
+    background: linear-gradient(90deg, rgba(239, 68, 68, 0.02) 0%, #0f172a 100%);
+    border-top: 1px solid rgba(239, 68, 68, 0.1);
+    border-right: 1px solid rgba(239, 68, 68, 0.05);
+    border-bottom: 1px solid rgba(239, 68, 68, 0.05);
+    box-shadow: 0 0 30px rgba(239, 68, 68, 0.05);
+}
+
+/* 인풋 컴포넌트 프리미엄화 */
+select, button {
+    padding: 14px 20px;
+    font-size: 15px;
+    font-weight: 600;
+    background-color: rgba(255, 255, 255, 0.03);
+    color: #8d949a;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: 0.2s ease;
+    font-family: inherit;
+}
+
+select:focus {
+    outline: none;
+    border-color: #0ea5e9;
+    box-shadow: 0 0 10px rgba(14, 165, 233, 0.2);
+}
+
+/* 메인 액션 버튼은 단독 포인트 컬러 부여 */
+button {
+    background-color: #5259cb; /* --accent */
+    border: none;
+    font-weight: 700;
+}
+
+button:hover {
+    background-color: #0284c7;
+    transform: translateY(-1px);
+    box-shadow: 0 10px 20px rgba(14, 165, 233, 0.2);
+}
+
+/* 피드백 메시지 타이포그래피 */
+#feedback-msg {
+    font-size: 22px;
+    font-weight: 800;
+    color: #10b981;
+    letter-spacing: -0.5px;
+}
+
+.warning #feedback-msg {
+    color: #ef4444;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}

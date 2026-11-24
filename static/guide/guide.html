@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>운동 가이드</title>
+  <link rel="stylesheet" href="../shared/site-nav.css">
+  <link rel="stylesheet" href="guide.css">
+  <script type="module" src="guide.js"></script>
+</head>
+<body class="guide-page">
+  <nav class="site-nav" aria-label="주 메뉴">
+    <a class="site-nav-logo" href="/">MOTION<span>AI</span></a>
+    <ul class="site-nav-links">
+      <li><a href="/">Introduction</a></li>
+      <li><a href="/tracker/">AI Tracker</a></li>
+      <li><a href="/dashboard/">Dashboard</a></li>
+      <li><a href="/guide/" aria-current="page">Guide</a></li>
+      <li><a href="/#community">Community</a></li>
+    </ul>
+  </nav>
+
+  <main class="guide">
+    <h1>운동 가이드</h1>
+    <p class="guide-lead">내 운동 기록에서 자주 나온 자세 오류부터 원인과 교정 방법을 보여 줘요.</p>
+    <div class="guide-tabs" id="guide-tabs" role="group" aria-label="종목"></div>
+    <p class="guide-summary" id="guide-summary" role="status" aria-live="polite"></p>
+    <div class="guide-list" id="guide-list"></div>
+  </main>
+</body>
+</html>
