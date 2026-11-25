@@ -1,13 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createBodyMeasure } from "../../static/tracker/js/body-measure.js";
-import { MEASURE_FRAMES, REFERENCE_PUSHUP_BOTTOM, SHIN_MAX, TRUNK_EXTRA_MAX } from "../../static/tracker/js/config.js";
+import { KNEE_OUT_ANGLE, MEASURE_FRAMES, REFERENCE_PUSHUP_BOTTOM, SHIN_MAX, SQUAT, TRUNK_EXTRA_MAX } from "../../static/tracker/js/config.js";
 import { angleAt } from "../../static/tracker/js/geometry.js";
 import {
   createPlankReference,
   createPushupReference,
   createSquatReference,
+  sideThigh,
 } from "../../static/tracker/js/reference-pose.js";
+import { createSession } from "../../static/tracker/js/session.js";
 import { fakeLandmarks, fakeWorld, HEIGHT, proneBody, squatBody, WIDTH } from "./fake-landmarks.js";
 
 // F4 측정값 모양의 체형 3세트 (px). 표준은 fake-landmarks.js squatBody의 길이와 같다
@@ -50,13 +52,13 @@ test("스쿼트: 0~thetaMax 모든 깊이에서 상체-정강이 차가 10° 이
   }
 });
 
-test("스쿼트: 분절 길이는 측정값 그대로이고, 무게중심이 발 중앙 위에 온다", () => {
+test("스쿼트: 분절 길이는 측정값 그대로이고(허벅지는 무릎을 벌린 만큼 옆에서 짧아 보인다), 무게중심이 발 중앙 위에 온다", () => {
   const body = SQUAT_BODIES.standard;
   const reference = createSquatReference(body);
   for (const theta of [10, 30, reference.thetaMax]) {
     const pose = reference.pose(ANKLE, theta);
     close(distance(pose.ankle, pose.knee), 180);
-    close(distance(pose.knee, pose.hip), 180);
+    close(distance(pose.knee, pose.hip), sideThigh(180, theta));
     close(distance(pose.hip, pose.shoulder), 220);
     close(distance(pose.shoulder, pose.ear), 50);
     close(distance(pose.heel, pose.toe), 80);
@@ -116,10 +118,11 @@ test("스쿼트: F4로 잰 측정값을 그대로 넣을 수 있다", () => {
 
 // 체형 3세트 결과 스냅샷 (명세 12장). 설정값(SHIN_MAX 등)이나 계산을 바꾸면 이 값을 다시 만든다.
 // 값: thetaMax, 깊이 40°·70°의 정강이·상체 기울기 (소수 첫째 자리). 긴 다리는 70°에서 정강이가 상한(40°)에 걸려 상체를 더 숙인다
+// 무릎 벌림 30°(KNEE_OUT_ANGLE) 전에는 긴 다리 체형이 77°에서 멈추고 바닥에서 상체를 49°까지 숙였다
 const SQUAT_SNAPSHOT = {
-  standard: { thetaMax: 90, at40: { shin: 25.7, torso: 25.7 }, at70: { shin: 37.3, torso: 37.3 } },
-  shortLegs: { thetaMax: 90, at40: { shin: 24.7, torso: 24.7 }, at70: { shin: 35.1, torso: 35.1 } },
-  longLegs: { thetaMax: 77, at40: { shin: 27.8, torso: 27.8 }, at70: { shin: 40, torso: 42.4 } },
+  standard: { thetaMax: 90, at40: { shin: 24.2, torso: 24.2 }, at70: { shin: 32.7, torso: 32.7 }, bottom: { shin: 34.3, torso: 34.3 } },
+  shortLegs: { thetaMax: 90, at40: { shin: 23.4, torso: 23.4 }, at70: { shin: 31, torso: 31 }, bottom: { shin: 32.4, torso: 32.4 } },
+  longLegs: { thetaMax: 90, at40: { shin: 26.2, torso: 26.2 }, at70: { shin: 35.5, torso: 35.5 }, bottom: { shin: 37.2, torso: 37.2 } },
 };
 
 test("스쿼트: 짧은 다리·긴 다리·표준 체형의 결과가 스냅샷과 같다", () => {
@@ -130,7 +133,7 @@ test("스쿼트: 짧은 다리·긴 다리·표준 체형의 결과가 스냅샷
   };
   for (const [name, body] of Object.entries(SQUAT_BODIES)) {
     const reference = createSquatReference(body);
-    const actual = { thetaMax: reference.thetaMax, at40: at(reference, 40), at70: at(reference, 70) };
+    const actual = { thetaMax: reference.thetaMax, at40: at(reference, 40), at70: at(reference, 70), bottom: at(reference, reference.thetaMax) };
     assert.deepEqual(actual, SQUAT_SNAPSHOT[name], name);
   }
 });
@@ -244,4 +247,42 @@ test("플랭크: 팔꿈치·손목은 발목보다 floorDrop만큼 아래 바닥
   close(distance(pose.shoulder, pose.elbow), 130);
   close(distance(pose.ankle, pose.shoulder), 600);
   close(angleAt(pose.ankle, pose.hip, pose.shoulder), 180, 1e-6);
+});
+
+test("무릎을 바깥으로 연 허벅지: 옆에서 본 길이는 앞뒤 성분만 cos(벌림 각)만큼 줄고, 3D 길이와 화면 각도는 그대로다", () => {
+  assert.equal(KNEE_OUT_ANGLE, 30);
+  const open = Math.cos((KNEE_OUT_ANGLE * Math.PI) / 180);
+  close(sideThigh(180, 0), 180); // 서 있으면 측정 길이 그대로
+  close(sideThigh(180, 90), 180 * open); // 허벅지가 수평이면 앞뒤 길이만 남는다
+  for (const theta of [20, 45, 70]) {
+    const length = sideThigh(180, theta);
+    const [across, down] = [length * Math.sin((theta * Math.PI) / 180), length * Math.cos((theta * Math.PI) / 180)];
+    close(Math.hypot(across / open, down), 180); // 벌린 방향까지 합친 실제 허벅지 길이
+  }
+  // 정답 자세의 엉덩이는 무릎을 벌린 만큼 뒤꿈치 쪽으로 덜 빠진다
+  const reference = createSquatReference(SQUAT_BODIES.longLegs);
+  const pose = reference.pose(ANKLE, 80);
+  assert.ok(pose.heel.x - pose.hip.x < 30, `엉덩이가 뒤꿈치보다 ${pose.heel.x - pose.hip.x}px 뒤`);
+});
+
+test("정강이를 20°만 기울이는 사용자가 정답 마네킹의 상체를 따라 해도 판정(상체 과다 숙임)에 걸리지 않는다", () => {
+  const userShin = 20;
+  for (const body of Object.values(SQUAT_BODIES)) {
+    const reference = createSquatReference(body);
+    for (let theta = SQUAT.PASS_MIN; theta <= reference.thetaMax; theta += 5) {
+      const { torso } = reference.angles(theta);
+      assert.ok(torso - userShin <= SQUAT.TORSO_SHIN_LIMIT, `깊이 ${theta}°: 마네킹 상체 ${torso.toFixed(1)}°`);
+    }
+  }
+  // 실제 판정 흐름: 긴 다리 체형의 바닥 자세 상체로 앉았다 일어나도 상체 과다 숙임이 기록되지 않는다
+  const torso = createSquatReference(SQUAT_BODIES.longLegs).angles(85).torso;
+  const session = createSession("squat", 0, 0);
+  const poses = [
+    ...Array(10).fill(squatBody(10, { torso: 10, shin: 5 })),
+    ...Array(20).fill(squatBody(85, { torso, shin: userShin })),
+    ...Array(10).fill(squatBody(10, { torso: 10, shin: 5 })),
+  ];
+  poses.forEach((body, i) => session.processFrame(fakeLandmarks(body), WIDTH, HEIGHT, i * 33));
+  assert.equal(session.stats.reps, 1);
+  assert.equal(session.stats.errors.squat.torsoLean, 0);
 });

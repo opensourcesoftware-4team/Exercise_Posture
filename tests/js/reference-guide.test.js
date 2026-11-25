@@ -80,6 +80,7 @@ test("스쿼트 상체 차는 사용자 상체 기울기에서 같은 깊이 정
 test("스쿼트: 반복 구간(35° 초과)이 아니거나, 정답 자세가 갈 수 없는 깊이(thetaMax 초과)거나, 판정 밖이면 재지 않는다", () => {
   assert.equal(torsoGapOf(judging(SQUAT.ATTEMPT_MIN, -30), FOLLOW), null);
   const longLegs = createReferenceFollow("squat", LONG_LEGS);
+  longLegs.setShinMax(25); // 발목 범위가 좁으면 정답 자세가 90°까지 못 간다
   assert.ok(longLegs.thetaMax < 90);
   assert.equal(torsoGapOf(judging(longLegs.thetaMax + 1, -30, longLegs), longLegs), null);
   assert.notEqual(torsoGapOf(judging(longLegs.thetaMax, -30, longLegs), longLegs), null);
