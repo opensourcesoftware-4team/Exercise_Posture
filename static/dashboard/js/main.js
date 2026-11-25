@@ -1,7 +1,7 @@
 // 대시보드 화면 조립 + 상태(종목·기간). 값은 모두 textContent로 넣는다.
 import { getStats, getRecords, deleteRecord } from "./api.js";
 import { drawTrend, destroyTrend } from "./charts.js";
-import { errorLabel, EXERCISE_NAMES } from "../../shared/error-labels.js";
+import { errorLabel, EXERCISE_NAMES, ERROR_ORDER } from "../../shared/error-labels.js";
 
 const state = { exercise: "squat", range: { type: "last", value: 7 } };
 const $ = (id) => document.getElementById(id);
@@ -57,6 +57,37 @@ function renderTrend(stats) {
   if (enough) drawTrend($("trend-canvas"), stats); else destroyTrend();
 }
 
+// 자주 틀린 자세: 기간 안 오답 합계를 정해진 순서로, 0회도 보여 준다. 정면 기록이 없으면 무릎 안쪽 모임(정면 전용)은 숨김
+function renderErrors(stats) {
+  const list = $("error-list");
+  list.replaceChildren();
+  const keys = ERROR_ORDER[stats.exercise].filter((k) => k !== "kneeValgus" || stats.hasFrontView);
+  const max = Math.max(1, ...keys.map((k) => stats.errorTotals[k]));
+  for (const key of keys) {
+    const n = stats.errorTotals[key];
+    const head = el("div", "db-error-head");
+    head.append(el("span", "", errorLabel(stats.exercise, key)), el("span", "db-error-count" + (n === 0 ? " zero" : ""), `${n}회`));
+    const fill = el("div", "db-bar-fill");
+    fill.style.width = `${(n / max) * 100}%`;
+    const track = el("div", "db-bar-track");
+    track.append(fill);
+    const row = el("div", "db-error-row");
+    row.append(head, track);
+    list.append(row);
+  }
+
+  const box = $("top-error");
+  box.replaceChildren();
+  if (!stats.topError) {
+    box.append(el("p", "db-top-ok", "이 기간에는 반복된 오답이 없어요 ✅"));
+    return;
+  }
+  box.append(
+    el("p", "db-top-title", errorLabel(stats.exercise, stats.topError)),
+    el("p", "db-top-sub", `선택한 기간 동안 ${stats.errorTotals[stats.topError]}회 나왔어요`),
+  );
+}
+
 function renderTable(records) {
   const body = $("history-body");
   body.replaceChildren();
@@ -100,6 +131,8 @@ async function load() {
     const [records, stats] = await Promise.all([getRecords(state.exercise), getStats(state.exercise, state.range)]);
     renderSummary(stats);
     renderTrend(stats);
+    $("error-area").hidden = stats.sessions === 0;
+    renderErrors(stats);
     renderTable(records);
   } catch (e) {
     showMessage(`데이터를 불러오지 못했습니다: ${e.message}`);

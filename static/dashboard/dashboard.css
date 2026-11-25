@@ -71,7 +71,7 @@ body.db-page {
 /* 카드 */
 .db-card { background: var(--bg-secondary); border-radius: 20px; border: 1px solid var(--border); padding: 30px; margin-bottom: 24px; }
 .db-card h3 { font-family: 'Urbanist', sans-serif; font-size: 1.4rem; margin: 0 0 20px; color: #38bdf8; letter-spacing: 0.5px; }
-.db-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 24px; }
+.db-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 24px; margin-bottom: 24px; }
 .db-grid .db-card { margin-bottom: 0; }
 #error-row { margin-bottom: 24px; }
 
