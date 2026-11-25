@@ -317,6 +317,12 @@
                         <label for="community-content">내용 <span>필수 · 최대 5,000자</span></label>
                         <textarea id="community-content" name="content" rows="10" placeholder="운동하며 알게 된 팁, 자세를 개선한 경험 등을 들려주세요." required aria-describedby="community-error-content"></textarea>
                         <div class="community-counter-row"><p id="community-error-content" class="community-field-error"></p><span id="community-counter">0 / 5,000</span></div>
+                        <label for="community-record_id">내 운동 기록 첨부 <span>선택</span></label>
+                        <select id="community-record_id" name="record_id" aria-describedby="community-record-help community-error-record_id">
+                            <option value="">첨부하지 않음</option>
+                        </select>
+                        <p id="community-record-help" class="community-form-note">AI 자세 분석에서 저장한 기록 중 하나를 고르면 운동 종류·측정 일시·횟수(플랭크는 시간)·정확도가 글과 함께 공개됩니다. 고르지 않은 기록은 게시판에 공개되지 않아요. 운동 기록은 측정한 서버 PC에서 접속했을 때만 첨부할 수 있어요.</p>
+                        <p id="community-error-record_id" class="community-field-error"></p>
                         <p class="community-form-note">등록한 글은 이 게시판에 접속하는 사람에게 공개됩니다. 현재 버전에서는 수정·삭제를 지원하지 않으니 등록 전 내용을 확인해 주세요.</p>
                         <div class="community-form-actions"><button id="community-cancel" type="button" class="community-button community-secondary">목록으로</button><button id="community-submit" type="submit" class="community-button community-primary">게시글 등록</button></div>
                     </fieldset>

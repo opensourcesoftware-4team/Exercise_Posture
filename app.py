@@ -1,3 +1,4 @@
+import ipaddress
 import os
 import sqlite3
 from datetime import datetime, timezone
@@ -8,6 +9,7 @@ from uuid import UUID
 from flask import Flask, jsonify, request
 from werkzeug.exceptions import HTTPException
 
+import storage
 from post_storage import PostStore
 
 ROOT = Path(__file__).resolve().parent
@@ -24,6 +26,19 @@ def text_fields(payload, specs):
             fields[key] = f'{label}은(는) 공백을 제외한 1~{limit:,}자로 입력해 주세요.'
         values[key] = value
     return fields, values
+
+
+def is_local_request():
+    """요청이 서버 PC 자신(127.0.0.1, ::1)에서 왔는지. 운동 기록은 서버 PC 사용자의 것으로 본다."""
+    try:
+        return ipaddress.ip_address(request.remote_addr or '').is_loopback
+    except ValueError:
+        return False
+
+
+def find_record(record_id):
+    """운동 기록 저장소(data/records.json)에서 id로 기록 하나를 찾는다. 없으면 None."""
+    return next((r for r in storage.load_records() if r.get('id') == record_id), None)
 
 
 def idempotency_key():
@@ -115,13 +130,29 @@ def create_app(config=None):
         if not isinstance(exercise, str) or exercise not in EXERCISES:
             fields['exercise_type'] = '운동 종류를 선택해 주세요.'
         values['exercise_type'] = exercise
+        # 운동 기록 첨부(선택): 화면이 보낸 수치는 믿지 않고, 서버에 저장된 기록을 id로 찾아 복사한다.
+        record, record_id = None, payload.get('record_id')
+        if record_id not in (None, '') and not is_local_request():
+            fields['record_id'] = '운동 기록 첨부는 서버 PC에서 접속한 경우에만 할 수 있어요.'
+        elif record_id not in (None, ''):
+            try:
+                record_id = str(UUID(record_id))
+            except (ValueError, TypeError, AttributeError):
+                record_id = None
+            if record_id:
+                try:
+                    record = find_record(record_id)
+                except (OSError, ValueError):   # 파일 읽기 실패·JSON 손상
+                    return fail('운동 기록을 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.', 503)
+            if record is None:
+                fields['record_id'] = '선택한 운동 기록을 찾을 수 없습니다. 목록을 새로 불러와 주세요.'
         if fields:
             return fail('입력 항목을 확인해 주세요.', fields=fields)
         request_id = idempotency_key()
         if not request_id:
             return fail('등록 요청 번호가 없습니다. 화면을 새로고침해 주세요.')
         try:
-            post, created = store.create(values, request_id, datetime.now(timezone.utc).isoformat())
+            post, created = store.create(values, request_id, datetime.now(timezone.utc).isoformat(), record)
         except ValueError:
             return fail('이미 사용한 요청 번호입니다. 새 등록을 시도해 주세요.', 409)
         return jsonify(post=post), 201 if created else 200

@@ -34,6 +34,17 @@ class PostStore:
                 );
                 CREATE INDEX IF NOT EXISTS comments_post_id
                     ON comments(post_id, id);
+                -- 게시글에 첨부한 운동 기록. 등록 시점의 값을 복사해 두어 원본 기록이 지워져도 유지된다.
+                CREATE TABLE IF NOT EXISTS post_records (
+                    post_id INTEGER PRIMARY KEY
+                        REFERENCES posts(id) ON DELETE CASCADE,
+                    record_id TEXT NOT NULL,
+                    exercise TEXT NOT NULL CHECK(exercise IN ('squat','pushup','plank')),
+                    view TEXT NOT NULL,
+                    started_at TEXT NOT NULL,
+                    count INTEGER NOT NULL,
+                    accuracy INTEGER NOT NULL
+                );
             """)
 
     @contextmanager
@@ -48,7 +59,14 @@ class PostStore:
         finally:
             db.close()
 
-    def create(self, values, request_id, created_at):
+    # 게시글과 첨부 기록을 한 번에 읽는다. 첨부가 없으면 r_ 열이 NULL.
+    SELECT_POSTS = """SELECT posts.*, r.record_id AS r_record_id, r.exercise AS r_exercise,
+                               r.view AS r_view, r.started_at AS r_started_at,
+                               r.count AS r_count, r.accuracy AS r_accuracy
+                        FROM posts LEFT JOIN post_records r ON r.post_id = posts.id"""
+
+    def create(self, values, request_id, created_at, record=None):
+        """게시글 저장. record는 첨부할 운동 기록(dict) 또는 None."""
         with self.connect() as db:
             cursor = db.execute(
                 """INSERT INTO posts
@@ -57,19 +75,35 @@ class PostStore:
                 (values['nickname'], values['title'], values['exercise_type'],
                  values['content'], created_at, request_id),
             )
-            row = db.execute("SELECT * FROM posts WHERE request_id=?", (request_id,)).fetchone()
-            if any(row[key] != values[key] for key in values):
+            created = cursor.rowcount == 1
+            if created and record:
+                db.execute(
+                    """INSERT INTO post_records
+                       (post_id,record_id,exercise,view,started_at,count,accuracy)
+                       VALUES (?,?,?,?,?,?,?)""",
+                    (cursor.lastrowid, record['id'], record['exercise'], record['view'],
+                     record['startedAt'], record['count'], record['accuracy']),
+                )
+            row = db.execute(self.SELECT_POSTS + ' WHERE posts.request_id=?', (request_id,)).fetchone()
+            if (any(row[key] != values[key] for key in values) or
+                    row['r_record_id'] != (record['id'] if record else None)):
                 raise ValueError('같은 요청 번호에 서로 다른 입력이 사용되었습니다.')
-            return self.public(row), cursor.rowcount == 1
+            return self.public(row), created
 
     @staticmethod
     def public(row):
-        return {key: row[key] for key in
+        post = {key: row[key] for key in
                 ('id', 'nickname', 'title', 'exercise_type', 'content', 'created_at')}
+        # 원본 기록 id는 공개하지 않는다. (기록 API로 남의 기록을 지우는 데 쓰일 수 있음)
+        post['record'] = None if row['r_record_id'] is None else {
+            'exercise': row['r_exercise'], 'view': row['r_view'], 'started_at': row['r_started_at'],
+            'count': row['r_count'], 'accuracy': row['r_accuracy'],
+        }
+        return post
 
     def get(self, post_id):
         with self.connect() as db:
-            row = db.execute('SELECT * FROM posts WHERE id=?', (post_id,)).fetchone()
+            row = db.execute(self.SELECT_POSTS + ' WHERE posts.id=?', (post_id,)).fetchone()
             return self.public(row) if row else None
 
     def list(self, exercise, page, page_size):
@@ -77,7 +111,7 @@ class PostStore:
         with self.connect() as db:
             total = db.execute('SELECT COUNT(*) FROM posts' + where, params).fetchone()[0]
             rows = db.execute(
-                'SELECT * FROM posts' + where + ' ORDER BY id DESC LIMIT ? OFFSET ?',
+                self.SELECT_POSTS + where + ' ORDER BY posts.id DESC LIMIT ? OFFSET ?',
                 params + [page_size, (page - 1) * page_size],
             ).fetchall()
             return [self.public(row) for row in rows], total

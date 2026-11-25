@@ -66,6 +66,15 @@ body.community-open main { width: 100%; min-width: 0; }
 #community-detail-content h2 { margin: 20px 0; font-size: clamp(23px,3vw,32px); line-height: 1.6; overflow-wrap: anywhere; }
 #community-detail-content .community-meta { justify-content: start; border-top: 0; padding: 0 0 24px; }
 .community-body { white-space: pre-wrap; overflow-wrap: anywhere; border-top: 1px solid #263650; padding-top: 28px; color: #cbd7e8; line-height: 1.95; font-size: 15px; min-height: 180px; }
+.community-card-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.community-tag-record { color: #fcd34d; background: #3a2f12; }
+#community-form select:disabled { opacity: .6; }
+.community-record { border: 1px solid #2b4a63; background: #0b2234; border-radius: 12px; padding: 18px 20px; margin: 0 0 24px; }
+.community-record-title { color: #7dd3fc; font-size: 13px; font-weight: 700; margin-bottom: 12px; }
+.community-record-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin: 0; }
+.community-record-grid dt { color: #8ea0b9; font-size: 11px; margin-bottom: 4px; }
+.community-record-grid dd { margin: 0; color: #e6eefb; font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+@media (max-width: 700px) { .community-record-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 #community-comments { background: #0e192b; border: 1px solid #263650; border-radius: 16px; padding: 30px 36px; margin-top: 20px; }
 .community-comments-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
 .community-comments-head h3 { font-size: 18px; }
