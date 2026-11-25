@@ -3,6 +3,7 @@
 // 계산은 "발목이 원점이고 사람이 +x 쪽을 보는" 기준 좌표에서 하고, 마지막에 보는 방향과 발목 위치로 옮긴다.
 import {
   DEPTH_TARGET,
+  KNEE_OUT_ANGLE,
   MASS_HAT,
   MASS_SHANK,
   MASS_THIGH,
@@ -41,6 +42,14 @@ function bisect(f, low, high) {
   return (from + to) / 2;
 }
 
+// 옆에서 본 허벅지 길이(px): 무릎을 바깥으로 KNEE_OUT_ANGLE만큼 열면 허벅지의 앞뒤 성분만 cos만큼 줄고 위아래 성분은 그대로다.
+// thighAngle은 옆에서 본(화면의) 허벅지-수직 각이다. 서 있으면(0°) 측정 길이 그대로, 허벅지가 수평(90°)이면 길이 × cos(벌림 각)
+export function sideThigh(thigh, thighAngle) {
+  const angle = thighAngle * RADIANS_PER_DEGREE;
+  const open = Math.cos(KNEE_OUT_ANGLE * RADIANS_PER_DEGREE);
+  return thigh / Math.sqrt(Math.cos(angle) ** 2 + (Math.sin(angle) / open) ** 2);
+}
+
 // 스쿼트 정답 자세 계산기 (명세 6.1). body: F4 측정값 { lengths, facing, heelOffset, heelDrop }
 // 무게중심이 발 중앙 위에 오도록 정강이·상체 기울기를 정한다. 상체는 정강이와 나란한 것이 기본이고,
 // 정강이가 shinMax에 걸리면 상체만 TRUNK_EXTRA_MAX까지 더 숙인다. 그래도 균형이 안 맞는 깊이는 이 체형에 무리다.
@@ -53,7 +62,7 @@ export function createSquatReference(body, shinMax = SHIN_MAX) {
   // 정강이 기울기 shin, 허벅지-수직 각 thigh(엉덩이는 무릎 뒤로 빠진다), 상체 기울기 lean(°)으로 쌓은 관절
   function joints(shin, thighAngle, lean) {
     const knee = step(ORIGIN, shank, shin);
-    const hip = step(knee, thigh, -thighAngle);
+    const hip = step(knee, sideThigh(thigh, thighAngle), -thighAngle);
     const shoulder = step(hip, torso, lean);
     return { ankle: ORIGIN, knee, hip, shoulder };
   }
