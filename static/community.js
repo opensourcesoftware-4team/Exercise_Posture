@@ -1,4 +1,4 @@
-import { listPosts, getPost, createPost, requestKey } from './community-api.js';
+import { listPosts, getPost, createPost, listComments, createComment, requestKey } from './community-api.js';
 
 const $ = id => document.getElementById(id);
 const labels = {squat: '스쿼트', pushup: '푸시업', plank: '플랭크', other: '기타'};
@@ -7,6 +7,9 @@ let listHash = '#community';
 let submitting = false;
 let pending = null;
 let notice = '';
+let currentPostId = null;
+let commentSubmitting = false;
+let commentPending = null;
 
 function element(tag, className, text) {
     const node = document.createElement(tag);
@@ -94,9 +97,12 @@ async function renderDetail(id, token) {
     show('detail');
     const container = $('community-detail-content');
     container.replaceChildren(element('p', '', '게시글을 불러오고 있습니다…'));
+    $('community-comments').hidden = true;
     try {
         const {post} = await getPost(id);
         if (token !== generation) return;
+        if (currentPostId !== post.id) resetCommentForm();
+        currentPostId = post.id;
         const meta = element('div', 'community-meta');
         meta.append(element('span', 'community-author', post.nickname), element('time', '', dateText(post.created_at)));
         const title = element('h2', '', post.title);
@@ -104,8 +110,40 @@ async function renderDetail(id, token) {
         container.replaceChildren(element('span', `community-tag community-tag-${post.exercise_type}`, labels[post.exercise_type]),
             title, meta, element('div', 'community-body', post.content));
         title.focus({preventScroll: true});
+        $('community-comments').hidden = false;
+        renderComments(post.id, token);
     } catch (error) {
         if (token === generation) errorView(container, error);
+    }
+}
+async function renderComments(postId, token) {
+    const list = $('community-comment-list');
+    list.replaceChildren(element('li', 'community-comment-empty', '댓글을 불러오고 있습니다…'));
+    $('community-comment-count').textContent = '';
+    try {
+        const data = await listComments(postId);
+        if (token !== generation) return;
+        $('community-comment-count').textContent = String(data.total);
+        list.replaceChildren();
+        if (!data.comments.length) {
+            list.append(element('li', 'community-comment-empty', '아직 댓글이 없어요. 첫 댓글을 남겨 주세요.'));
+        }
+        for (const comment of data.comments) {
+            const item = element('li', 'community-comment');
+            const meta = element('div', 'community-comment-meta');
+            meta.append(element('span', 'community-author', comment.nickname),
+                element('time', '', dateText(comment.created_at)));
+            item.append(meta, element('p', 'community-comment-body', comment.content));
+            list.append(item);
+        }
+    } catch (error) {
+        if (token !== generation) return;
+        const item = element('li', 'community-comment-empty');
+        const retry = element('button', 'community-button community-secondary', '다시 시도');
+        retry.type = 'button';
+        retry.addEventListener('click', () => renderComments(postId, generation));
+        item.append(element('p', 'community-error', error.message), retry);
+        list.replaceChildren(item);
     }
 }
 function renderRoute() {
@@ -128,36 +166,54 @@ function renderRoute() {
         $('community-detail-content').replaceChildren(element('p', 'community-error', '잘못된 게시글 주소입니다.'));
     }
 }
-function clearErrors() {
-    for (const key of ['nickname', 'title', 'exercise_type', 'content']) {
-        $(`community-error-${key}`).textContent = '';
-        $(`community-${key}`).removeAttribute('aria-invalid');
+function clearErrors(prefix = 'community', keys = ['nickname', 'title', 'exercise_type', 'content']) {
+    for (const key of keys) {
+        $(`${prefix}-error-${key}`).textContent = '';
+        $(`${prefix}-${key}`).removeAttribute('aria-invalid');
     }
-    $('community-form-status').textContent = '';
 }
-function fieldErrors(errors) {
+function fieldErrors(errors, prefix = 'community') {
     for (const [key, message] of Object.entries(errors)) {
-        const target = $(`community-error-${key}`);
+        const target = $(`${prefix}-error-${key}`);
         if (target) {
             target.textContent = message;
-            $(`community-${key}`).setAttribute('aria-invalid', 'true');
+            $(`${prefix}-${key}`).setAttribute('aria-invalid', 'true');
         }
     }
     const first = Object.keys(errors)[0];
-    if (first) $(`community-${first}`)?.focus();
+    if (first) $(`${prefix}-${first}`)?.focus();
+}
+// 프런트 길이 검사는 서버와 같이 코드포인트 단위(이모지 1개 = 1자)로 센다.
+function validateText(data, specs) {
+    const errors = {};
+    for (const [key, label, max] of specs) {
+        data[key] = (data[key] || '').trim();
+        if (!data[key] || Array.from(data[key]).length > max || data[key].includes('\0')) {
+            errors[key] = `${label}은(는) 1~${max.toLocaleString()}자로 입력해 주세요.`;
+        }
+    }
+    return errors;
+}
+const COMMENT_KEYS = ['nickname', 'content'];
+function commentStatus(text, error = false) {
+    $('community-comment-status').textContent = text;
+    $('community-comment-status').classList.toggle('community-error', error);
+}
+function resetCommentForm() {
+    // 다른 게시글로 옮기면 쓰던 댓글이 엉뚱한 글에 붙지 않게 본문과 재시도 번호를 비운다. 닉네임은 유지.
+    $('community-comment-content').value = '';
+    $('community-comment-counter').textContent = '0 / 1,000';
+    commentPending = null;
+    clearErrors('community-comment', COMMENT_KEYS);
+    commentStatus('');
 }
 $('community-form').addEventListener('submit', async event => {
     event.preventDefault();
     if (submitting) return;
     clearErrors();
+    $('community-form-status').textContent = '';
     const data = Object.fromEntries(new FormData(event.currentTarget));
-    const errors = {};
-    for (const [key, label, max] of [['nickname', '닉네임', 20], ['title', '제목', 100], ['content', '내용', 5000]]) {
-        data[key] = data[key].trim();
-        if (!data[key] || Array.from(data[key]).length > max || data[key].includes('\0')) {
-            errors[key] = `${label}은(는) 1~${max.toLocaleString()}자로 입력해 주세요.`;
-        }
-    }
+    const errors = validateText(data, [['nickname', '닉네임', 20], ['title', '제목', 100], ['content', '내용', 5000]]);
     if (!labels[data.exercise_type]) errors.exercise_type = '운동 종류를 선택해 주세요.';
     if (Object.keys(errors).length) { fieldErrors(errors); return; }
     const serialized = JSON.stringify(data);
@@ -183,6 +239,46 @@ $('community-form').addEventListener('submit', async event => {
         $('community-submit').textContent = '게시글 등록';
     }
 });
+$('community-comment-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    if (commentSubmitting || currentPostId === null) return;
+    clearErrors('community-comment', COMMENT_KEYS);
+    commentStatus('');
+    const postId = currentPostId;
+    const data = Object.fromEntries(new FormData(event.currentTarget));
+    const errors = validateText(data, [['nickname', '닉네임', 20], ['content', '댓글', 1000]]);
+    if (Object.keys(errors).length) { fieldErrors(errors, 'community-comment'); return; }
+    // 응답을 못 받고 다시 누른 경우 같은 요청 번호를 써서 서버가 한 번만 저장하게 한다.
+    const serialized = JSON.stringify([postId, data]);
+    if (!commentPending || commentPending.serialized !== serialized) commentPending = {serialized, key: requestKey()};
+    commentSubmitting = true;
+    $('community-comment-fields').disabled = true;
+    $('community-comment-submit').textContent = '등록 중…';
+    commentStatus('댓글을 저장하고 있습니다.');
+    try {
+        await createComment(postId, data, commentPending.key);
+        commentPending = null;
+        if (postId === currentPostId) {
+            $('community-comment-content').value = '';
+            $('community-comment-counter').textContent = '0 / 1,000';
+            commentStatus('댓글이 등록되었습니다.');
+            renderComments(postId, generation);
+        }
+    } catch (error) {
+        commentStatus(error.message, true);
+        fieldErrors(error.fields || {}, 'community-comment');
+    } finally {
+        commentSubmitting = false;
+        $('community-comment-fields').disabled = false;
+        $('community-comment-submit').textContent = '댓글 등록';
+    }
+});
+$('community-comment-content').addEventListener('input', event => {
+    $('community-comment-counter').textContent = `${Array.from(event.target.value).length.toLocaleString()} / 1,000`;
+});
+$('community-comments-refresh').onclick = () => {
+    if (currentPostId !== null) renderComments(currentPostId, generation);
+};
 $('community-content').addEventListener('input', event => {
     $('community-counter').textContent = `${Array.from(event.target.value).length.toLocaleString()} / 5,000`;
 });
@@ -213,7 +309,8 @@ window.addEventListener('hashchange', () => {
     else renderRoute();
 });
 window.addEventListener('beforeunload', event => {
-    if (submitting || ['nickname','title','content'].some(key => $(`community-${key}`).value.trim())) {
+    if (submitting || commentSubmitting || ['nickname','title','content'].some(key => $(`community-${key}`).value.trim())
+            || $('community-comment-content').value.trim()) {
         event.preventDefault(); event.returnValue = '';
     }
 });

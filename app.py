@@ -12,6 +12,27 @@ from post_storage import PostStore
 
 ROOT = Path(__file__).resolve().parent
 EXERCISES = {'squat', 'pushup', 'plank', 'other'}
+COMMENT_FIELDS = [('nickname', '닉네임', 20), ('content', '댓글', 1000)]
+
+def text_fields(payload, specs):
+    """문자열 입력 검증: 앞뒤 공백 제거 후 1~limit자, NUL 문자 금지. (오류, 정리된 값)을 돌려준다."""
+    fields, values = {}, {}
+    for key, label, limit in specs:
+        raw = payload.get(key)
+        value = raw.strip() if isinstance(raw, str) else ''
+        if not value or len(value) > limit or '\x00' in value:
+            fields[key] = f'{label}은(는) 공백을 제외한 1~{limit:,}자로 입력해 주세요.'
+        values[key] = value
+    return fields, values
+
+
+def idempotency_key():
+    """Idempotency-Key 헤더를 UUID 문자열로. 없거나 형식이 틀리면 None."""
+    try:
+        return str(UUID(request.headers.get('Idempotency-Key', '')))
+    except (ValueError, AttributeError):
+        return None
+
 
 # Flask 앱 초기화 (정적 파일 경로, DB 경로 및 PostStore 등록)
 def create_app(config=None):
@@ -37,7 +58,7 @@ def create_app(config=None):
             origin = request.headers.get('Origin')
             if (request.headers.get('Sec-Fetch-Site') == 'cross-site' or
                     (origin and urlsplit(origin).netloc != request.host)):
-                return fail('다른 사이트에서는 게시글을 등록할 수 없습니다.', 403)
+                return fail('다른 사이트에서는 게시글·댓글을 등록할 수 없습니다.', 403)
             if not request.is_json:
                 return fail('JSON 형식으로 요청해 주세요.', 415)
 
@@ -88,29 +109,50 @@ def create_app(config=None):
         payload = request.get_json(silent=True)
         if not isinstance(payload, dict):
             return fail('입력 내용을 확인해 주세요.')
-        fields, values = {}, {}
-        for key, label, limit in [('nickname', '닉네임', 20), ('title', '제목', 100),
-                                  ('content', '내용', 5000)]:
-            raw = payload.get(key)
-            value = raw.strip() if isinstance(raw, str) else ''
-            if not value or len(value) > limit or '\x00' in value:
-                fields[key] = f'{label}은(는) 공백을 제외한 1~{limit:,}자로 입력해 주세요.'
-            values[key] = value
+        fields, values = text_fields(payload, [('nickname', '닉네임', 20), ('title', '제목', 100),
+                                               ('content', '내용', 5000)])
         exercise = payload.get('exercise_type')
         if not isinstance(exercise, str) or exercise not in EXERCISES:
             fields['exercise_type'] = '운동 종류를 선택해 주세요.'
         values['exercise_type'] = exercise
         if fields:
             return fail('입력 항목을 확인해 주세요.', fields=fields)
-        try:
-            request_id = str(UUID(request.headers.get('Idempotency-Key', '')))
-        except (ValueError, AttributeError):
+        request_id = idempotency_key()
+        if not request_id:
             return fail('등록 요청 번호가 없습니다. 화면을 새로고침해 주세요.')
         try:
             post, created = store.create(values, request_id, datetime.now(timezone.utc).isoformat())
         except ValueError:
             return fail('이미 사용한 요청 번호입니다. 새 등록을 시도해 주세요.', 409)
         return jsonify(post=post), 201 if created else 200
+
+    @app.get('/api/posts/<int:post_id>/comments')
+    def list_comments(post_id):
+        comments = store.list_comments(post_id)
+        if comments is None:
+            return fail('게시글을 찾을 수 없습니다.', 404)
+        return jsonify(comments=comments, total=len(comments))
+
+    @app.post('/api/posts/<int:post_id>/comments')
+    def create_comment(post_id):
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict):
+            return fail('입력 내용을 확인해 주세요.')
+        fields, values = text_fields(payload, COMMENT_FIELDS)
+        if fields:
+            return fail('입력 항목을 확인해 주세요.', fields=fields)
+        request_id = idempotency_key()
+        if not request_id:
+            return fail('등록 요청 번호가 없습니다. 화면을 새로고침해 주세요.')
+        try:
+            result = store.create_comment(post_id, values, request_id,
+                                          datetime.now(timezone.utc).isoformat())
+        except ValueError:
+            return fail('이미 사용한 요청 번호입니다. 새 등록을 시도해 주세요.', 409)
+        if result is None:
+            return fail('게시글을 찾을 수 없습니다.', 404)
+        comment, created = result
+        return jsonify(comment=comment), 201 if created else 200
 
     # 에러 핸들러 (전역 예외 처리)
     @app.errorhandler(sqlite3.Error)
