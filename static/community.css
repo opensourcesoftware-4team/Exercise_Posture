@@ -21,6 +21,10 @@ body.community-open main { width: 100%; min-width: 0; }
 .community-primary { background: #38bdf8; color: #031b2c; }
 .community-primary:hover { background: #7dd3fc; }
 .community-secondary { color: #c1cde0; background: #111d30; border-color: #293b54; }
+.community-danger { background: #f43f5e; color: #fff; }
+.community-danger:hover { background: #fb7185; }
+.community-danger-outline { color: #fda4af; background: transparent; border-color: #5b2a3a; }
+.community-danger-outline:hover { background: #2a1520; }
 #community-section button:disabled { opacity: .5; cursor: not-allowed; }
 .community-list-info { display: flex; justify-content: space-between; align-items: center; color: #8ea0b9; margin-bottom: 15px; font-size: 12px; min-height: 28px; }
 #community-refresh { color: #a8bad2; border: 0; background: none; cursor: pointer; padding: 6px; }
@@ -98,6 +102,16 @@ body.community-open main { width: 100%; min-width: 0; }
 #community-comment-counter { flex-shrink: 0; font-size: 11px; color: #8fa1ba; padding-top: 6px; }
 #community-comment-form .community-form-actions { margin-top: 10px; }
 #community-comment-status:not(:empty) { padding-top: 14px; color: #86efac; line-height: 1.8; font-size: 14px; }
-@media (max-width: 900px) { #community-cards { grid-template-columns: repeat(2,minmax(0,1fr)); } .community-label { display: none; } nav { padding: 16px 24px; } .nav-links { gap: 18px; } }
+#community-form #community-delete_pin { max-width: 220px; letter-spacing: .3em; }
+.community-delete { margin-top: 28px; padding-top: 20px; border-top: 1px solid #263650; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
+.community-delete-note { color: #91a4bf; font-size: 12px; line-height: 1.8; }
+.community-delete-form { width: 100%; background: #140f1c; border: 1px solid #5b2a3a; border-radius: 12px; padding: 18px 20px; }
+.community-delete-warning { color: #fecdd3; font-size: 14px; line-height: 1.8; margin-bottom: 12px; }
+.community-delete-form label { display: block; font-weight: 600; margin-bottom: 8px; font-size: 13px; }
+.community-delete-form input { width: 100%; max-width: 220px; background: #071120; color: #e6eefb; border: 1px solid #34435a; border-radius: 9px; padding: 11px 14px; font-size: 14px; letter-spacing: .3em; }
+.community-delete-form input[aria-invalid="true"] { border-color: #fb7185; }
+.community-delete-form .community-form-actions { margin-top: 6px; }
+#community-form #community-delete_pin::placeholder, .community-delete-form input::placeholder { letter-spacing: normal; }
+ { #community-cards { grid-template-columns: repeat(2,minmax(0,1fr)); } .community-label { display: none; } nav { padding: 16px 24px; } .nav-links { gap: 18px; } }
 @media (max-width: 600px) { main { padding: 20px 16px; margin-top: 110px; } nav { flex-wrap: wrap; gap: 14px; padding: 15px 16px; } nav > div:last-child:not(.logo) { display: none; } .nav-links { width: 100%; justify-content: space-between; order: 2; gap: 10px; } .nav-links li { font-size: 12px; } #community-section { padding-top: 12px; } .community-header { padding-bottom: 26px; } .community-toolbar { flex-wrap: wrap; gap: 18px; } #community-filters { gap: 6px; } #community-filters button { padding: 8px 13px; } #community-new { width: 100%; } #community-cards { grid-template-columns: 1fr; } .community-card { min-height: 220px; } .community-form-row { grid-template-columns: 1fr; gap: 0; } #community-form, #community-detail-content, #community-comments { padding: 22px 18px; } #community-comment-form input { max-width: none; } }
 @media (prefers-reduced-motion: reduce) { .community-card { transition: none; } #community-section { animation: none; } }
