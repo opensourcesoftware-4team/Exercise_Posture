@@ -1,5 +1,6 @@
 import json
 import sqlite3
+from contextlib import closing
 import tempfile
 import unittest
 from pathlib import Path
@@ -111,7 +112,7 @@ class RecordAttachmentTest(unittest.TestCase):
         self.assertEqual(self.post(key=key, record_id=self.plank['id']).status_code, 409)
         self.assertEqual(self.post(key=key).status_code, 409)
         self.assertEqual(self.client.get('/api/posts').json['total'], 1)
-        with sqlite3.connect(self.config['DATABASE_PATH']) as db:
+        with closing(sqlite3.connect(self.config['DATABASE_PATH'])) as db:
             self.assertEqual(db.execute('SELECT COUNT(*) FROM post_records').fetchone()[0], 1)
 
     def test_broken_records_file(self):

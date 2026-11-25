@@ -1,4 +1,5 @@
 import sqlite3
+from contextlib import closing
 import tempfile
 import unittest
 from concurrent.futures import ThreadPoolExecutor
@@ -71,7 +72,7 @@ class CommentsTest(unittest.TestCase):
     def test_missing_post(self):
         self.assertEqual(self.comments(999).status_code, 404)
         self.assertEqual(self.comment(post_id=999).status_code, 404)
-        with sqlite3.connect(self.config['DATABASE_PATH']) as db:
+        with closing(sqlite3.connect(self.config['DATABASE_PATH'])) as db:
             self.assertEqual(db.execute('SELECT COUNT(*) FROM comments').fetchone()[0], 0)
 
     def test_foreign_key_enforced_in_db(self):
