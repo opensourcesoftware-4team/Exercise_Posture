@@ -1,5 +1,6 @@
 import ipaddress
 import os
+import re
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
@@ -10,7 +11,7 @@ from flask import Flask, jsonify, request
 from werkzeug.exceptions import HTTPException
 
 import storage
-from post_storage import PostStore
+from post_storage import MAX_PIN_FAILURES, PostStore
 
 ROOT = Path(__file__).resolve().parent
 EXERCISES = {'squat', 'pushup', 'plank', 'other'}
@@ -26,6 +27,11 @@ def text_fields(payload, specs):
             fields[key] = f'{label}은(는) 공백을 제외한 1~{limit:,}자로 입력해 주세요.'
         values[key] = value
     return fields, values
+
+
+def valid_pin(value):
+    """삭제 PIN: 숫자(0-9) 정확히 4자리 문자열. 전각 숫자 등 다른 문자는 거부한다."""
+    return isinstance(value, str) and re.fullmatch(r'[0-9]{4}', value) is not None
 
 
 def is_local_request():
@@ -68,12 +74,15 @@ def create_app(config=None):
     # CSRF 방어 및 타입 검사 
     @app.before_request
     def protect_write():
-        if request.path.startswith('/api/') and request.method == 'POST':
-            # JSON만 받고 다른 사이트에서 브라우저를 통한 글 등록은 막는다.
+        # 게시글 삭제(DELETE /api/posts/<id>)도 등록과 같은 검사를 받는다.
+        writing = request.method == 'POST' or (
+            request.method == 'DELETE' and request.path.startswith('/api/posts/'))
+        if request.path.startswith('/api/') and writing:
+            # JSON만 받고 다른 사이트에서 브라우저를 통한 글 등록·삭제는 막는다.
             origin = request.headers.get('Origin')
             if (request.headers.get('Sec-Fetch-Site') == 'cross-site' or
                     (origin and urlsplit(origin).netloc != request.host)):
-                return fail('다른 사이트에서는 게시글·댓글을 등록할 수 없습니다.', 403)
+                return fail('다른 사이트에서는 게시글·댓글을 등록하거나 삭제할 수 없습니다.', 403)
             if not request.is_json:
                 return fail('JSON 형식으로 요청해 주세요.', 415)
 
@@ -117,7 +126,10 @@ def create_app(config=None):
     @app.get('/api/posts/<int:post_id>')
     def get_post(post_id):
         post = store.get(post_id)
-        return jsonify(post=post) if post else fail('게시글을 찾을 수 없습니다.', 404)
+        if not post:
+            return fail('게시글을 찾을 수 없습니다.', 404)
+        # 서버 PC에서 보는 경우 화면이 PIN 없이 삭제 버튼을 보여 줄 수 있게 알려 준다.
+        return jsonify(post=post, can_admin_delete=is_local_request())
 
     @app.post('/api/posts')
     def create_post():
@@ -146,16 +158,48 @@ def create_app(config=None):
                     return fail('운동 기록을 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.', 503)
             if record is None:
                 fields['record_id'] = '선택한 운동 기록을 찾을 수 없습니다. 목록을 새로 불러와 주세요.'
+        # 삭제 PIN(선택): 숫자 4자리. 없으면 그 글은 서버 PC에서만 삭제할 수 있다.
+        delete_pin = payload.get('delete_pin')
+        if delete_pin in (None, ''):
+            delete_pin = None
+        elif not valid_pin(delete_pin):
+            fields['delete_pin'] = '삭제 PIN은 숫자 4자리로 입력해 주세요.'
         if fields:
             return fail('입력 항목을 확인해 주세요.', fields=fields)
         request_id = idempotency_key()
         if not request_id:
             return fail('등록 요청 번호가 없습니다. 화면을 새로고침해 주세요.')
         try:
-            post, created = store.create(values, request_id, datetime.now(timezone.utc).isoformat(), record)
+            post, created = store.create(values, request_id, datetime.now(timezone.utc).isoformat(),
+                                         record, delete_pin)
         except ValueError:
             return fail('이미 사용한 요청 번호입니다. 새 등록을 시도해 주세요.', 409)
         return jsonify(post=post), 201 if created else 200
+
+    @app.delete('/api/posts/<int:post_id>')
+    def delete_post(post_id):
+        """게시글 삭제. 서버 PC는 PIN 없이, 다른 기기는 작성할 때 정한 PIN으로 삭제한다."""
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict):
+            return fail('입력 내용을 확인해 주세요.')
+        admin = is_local_request()
+        delete_pin = payload.get('delete_pin')
+        if not admin and not valid_pin(delete_pin):
+            # 형식이 틀린 입력은 실패 횟수에 넣지 않는다.
+            return fail('입력 항목을 확인해 주세요.',
+                        fields={'delete_pin': '삭제 PIN은 숫자 4자리로 입력해 주세요.'})
+        result, remaining = store.delete(post_id, None if admin else delete_pin, admin)
+        if result == 'deleted':
+            return jsonify(deleted=True, id=post_id)
+        if result == 'not_found':
+            return fail('게시글을 찾을 수 없습니다.', 404)
+        if result == 'no_pin':
+            return fail('삭제 PIN 없이 작성된 글은 서버 PC에서만 삭제할 수 있어요.', 403)
+        if result == 'locked':
+            return fail(f'삭제 PIN을 {MAX_PIN_FAILURES}번 틀려 이 글의 PIN 삭제가 잠겼어요. '
+                        '서버 PC에서 삭제해 주세요.', 423)
+        return fail('삭제 PIN이 맞지 않아요.', 403,
+                    fields={'delete_pin': f'삭제 PIN이 맞지 않아요. (남은 시도 {remaining}번)'})
 
     @app.get('/api/posts/<int:post_id>/comments')
     def list_comments(post_id):

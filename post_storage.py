@@ -3,6 +3,11 @@ import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 
+from werkzeug.security import check_password_hash, generate_password_hash
+
+# 삭제 PIN을 이 횟수만큼 틀리면 그 글은 PIN으로 삭제할 수 없게 잠근다. (4자리 = 1만 가지라 추측 방지 필요)
+MAX_PIN_FAILURES = 5
+
 
 class PostStore:
     def __init__(self, path):
@@ -46,6 +51,16 @@ class PostStore:
                     accuracy INTEGER NOT NULL
                 );
             """)
+            self.migrate(db)
+
+    @staticmethod
+    def migrate(db):
+        """삭제 PIN 열 추가. 이미 있는 DB도 서버를 켜면 열이 생기고, 기존 글은 PIN 없음(NULL)이 된다."""
+        columns = {row['name'] for row in db.execute('PRAGMA table_info(posts)')}
+        if 'delete_pin_hash' not in columns:
+            db.execute('ALTER TABLE posts ADD COLUMN delete_pin_hash TEXT')
+        if 'delete_failures' not in columns:
+            db.execute('ALTER TABLE posts ADD COLUMN delete_failures INTEGER NOT NULL DEFAULT 0')
 
     @contextmanager
     def connect(self):
@@ -65,15 +80,17 @@ class PostStore:
                                r.count AS r_count, r.accuracy AS r_accuracy
                         FROM posts LEFT JOIN post_records r ON r.post_id = posts.id"""
 
-    def create(self, values, request_id, created_at, record=None):
-        """게시글 저장. record는 첨부할 운동 기록(dict) 또는 None."""
+    def create(self, values, request_id, created_at, record=None, delete_pin=None):
+        """게시글 저장. record는 첨부할 운동 기록(dict) 또는 None.
+        delete_pin은 숫자 4자리 문자열 또는 None. 평문은 저장하지 않고 해시만 저장한다."""
+        pin_hash = generate_password_hash(delete_pin) if delete_pin else None
         with self.connect() as db:
             cursor = db.execute(
                 """INSERT INTO posts
-                   (nickname,title,exercise_type,content,created_at,request_id)
-                   VALUES (?,?,?,?,?,?) ON CONFLICT(request_id) DO NOTHING""",
+                   (nickname,title,exercise_type,content,created_at,request_id,delete_pin_hash)
+                   VALUES (?,?,?,?,?,?,?) ON CONFLICT(request_id) DO NOTHING""",
                 (values['nickname'], values['title'], values['exercise_type'],
-                 values['content'], created_at, request_id),
+                 values['content'], created_at, request_id, pin_hash),
             )
             created = cursor.rowcount == 1
             if created and record:
@@ -99,6 +116,8 @@ class PostStore:
             'exercise': row['r_exercise'], 'view': row['r_view'], 'started_at': row['r_started_at'],
             'count': row['r_count'], 'accuracy': row['r_accuracy'],
         }
+        # PIN 해시와 실패 횟수는 공개하지 않는다. 화면은 PIN 입력칸을 보여 줄지만 알면 된다.
+        post['has_delete_pin'] = row['delete_pin_hash'] is not None
         return post
 
     def get(self, post_id):
@@ -115,6 +134,34 @@ class PostStore:
                 params + [page_size, (page - 1) * page_size],
             ).fetchall()
             return [self.public(row) for row in rows], total
+
+    def delete(self, post_id, delete_pin=None, admin=False):
+        """게시글 삭제. 댓글과 첨부 기록은 ON DELETE CASCADE로 함께 지워진다.
+
+        admin=True(서버 PC)는 PIN 없이 삭제한다. 그 외에는 PIN이 맞아야 한다.
+        결과: ('deleted', None) / ('not_found', None) / ('no_pin', None)
+              / ('locked', None) / ('wrong', 남은 시도 횟수)
+        """
+        with self.connect() as db:
+            # 쓰기 잠금을 먼저 잡아 동시에 들어온 PIN 시도를 한 줄로 세운다.
+            # (동시에 여러 번 보내 실패 횟수 제한을 건너뛰는 것을 막는다)
+            db.execute('BEGIN IMMEDIATE')
+            row = db.execute('SELECT delete_pin_hash, delete_failures FROM posts WHERE id=?',
+                             (post_id,)).fetchone()
+            if row is None:
+                return 'not_found', None
+            if not admin:
+                if row['delete_pin_hash'] is None:
+                    return 'no_pin', None
+                if row['delete_failures'] >= MAX_PIN_FAILURES:
+                    return 'locked', None
+                if not check_password_hash(row['delete_pin_hash'], delete_pin or ''):
+                    failures = row['delete_failures'] + 1
+                    db.execute('UPDATE posts SET delete_failures=? WHERE id=?', (failures, post_id))
+                    return ('locked', None) if failures >= MAX_PIN_FAILURES else \
+                        ('wrong', MAX_PIN_FAILURES - failures)
+            db.execute('DELETE FROM posts WHERE id=?', (post_id,))
+            return 'deleted', None
 
     # ---- 댓글 ----
     @staticmethod
