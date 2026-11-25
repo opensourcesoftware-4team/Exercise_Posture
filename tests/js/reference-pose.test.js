@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createBodyMeasure } from "../../static/tracker/js/body-measure.js";
-import { KNEE_OUT_ANGLE, MEASURE_FRAMES, REFERENCE_PUSHUP_BOTTOM, SHIN_MAX, SQUAT, TRUNK_EXTRA_MAX } from "../../static/tracker/js/config.js";
+import { ELBOW_OUT_ANGLE, KNEE_OUT_ANGLE, MEASURE_FRAMES, REFERENCE_PUSHUP_BOTTOM, SHIN_MAX, SQUAT, TRUNK_EXTRA_MAX } from "../../static/tracker/js/config.js";
 import { angleAt } from "../../static/tracker/js/geometry.js";
 import {
   createPlankReference,
   createPushupReference,
   createSquatReference,
-  sideThigh,
+  sideLength,
 } from "../../static/tracker/js/reference-pose.js";
 import { createSession } from "../../static/tracker/js/session.js";
 import { fakeLandmarks, fakeWorld, HEIGHT, proneBody, squatBody, WIDTH } from "./fake-landmarks.js";
@@ -58,7 +58,7 @@ test("스쿼트: 분절 길이는 측정값 그대로이고(허벅지는 무릎�
   for (const theta of [10, 30, reference.thetaMax]) {
     const pose = reference.pose(ANKLE, theta);
     close(distance(pose.ankle, pose.knee), 180);
-    close(distance(pose.knee, pose.hip), sideThigh(180, theta));
+    close(distance(pose.knee, pose.hip), sideLength(180, theta, KNEE_OUT_ANGLE));
     close(distance(pose.hip, pose.shoulder), 220);
     close(distance(pose.shoulder, pose.ear), 50);
     close(distance(pose.heel, pose.toe), 80);
@@ -150,7 +150,7 @@ test("푸시업: 팔을 다 폈을 때 손목이 어깨 바로 아래 바닥에 
   close(pose.shoulder.y, PRONE_ANKLE.y - 260);
 });
 
-test("푸시업: 모든 팔꿈치 각에서 발목–엉덩이–어깨–귀가 일직선이고 길이는 측정값 그대로다", () => {
+test("푸시업: 모든 팔꿈치 각에서 발목–엉덩이–어깨–귀가 일직선이고, 길이는 측정값 그대로다(위팔은 팔꿈치를 벌린 만큼 옆에서 짧아 보인다)", () => {
   const reference = createPushupReference(PRONE_BODY);
   const wrist = reference.pose(PRONE_ANKLE, 180).wrist;
   for (const alpha of ELBOW_ANGLES) {
@@ -160,7 +160,8 @@ test("푸시업: 모든 팔꿈치 각에서 발목–엉덩이–어깨–귀가
     close(distance(pose.ankle, pose.hip), 300);
     close(distance(pose.ankle, pose.shoulder), 600);
     close(distance(pose.shoulder, pose.ear), 60);
-    close(distance(pose.shoulder, pose.elbow), 130);
+    const upperAngle = (Math.atan2(Math.abs(pose.elbow.x - pose.shoulder.x), pose.elbow.y - pose.shoulder.y) * 180) / Math.PI;
+    close(distance(pose.shoulder, pose.elbow), sideLength(130, upperAngle, ELBOW_OUT_ANGLE), 1e-6);
     close(distance(pose.elbow, pose.wrist), 130);
     close(angleAt(pose.shoulder, pose.elbow, pose.wrist), alpha, 1e-4);
     assert.deepEqual(pose.wrist, wrist); // 손은 바닥에 고정
@@ -252,10 +253,10 @@ test("플랭크: 팔꿈치·손목은 발목보다 floorDrop만큼 아래 바닥
 test("무릎을 바깥으로 연 허벅지: 옆에서 본 길이는 앞뒤 성분만 cos(벌림 각)만큼 줄고, 3D 길이와 화면 각도는 그대로다", () => {
   assert.equal(KNEE_OUT_ANGLE, 45);
   const open = Math.cos((KNEE_OUT_ANGLE * Math.PI) / 180);
-  close(sideThigh(180, 0), 180); // 서 있으면 측정 길이 그대로
-  close(sideThigh(180, 90), 180 * open); // 허벅지가 수평이면 앞뒤 길이만 남는다
+  close(sideLength(180, 0, KNEE_OUT_ANGLE), 180); // 서 있으면 측정 길이 그대로
+  close(sideLength(180, 90, KNEE_OUT_ANGLE), 180 * open); // 허벅지가 수평이면 앞뒤 길이만 남는다
   for (const theta of [20, 45, 70]) {
-    const length = sideThigh(180, theta);
+    const length = sideLength(180, theta, KNEE_OUT_ANGLE);
     const [across, down] = [length * Math.sin((theta * Math.PI) / 180), length * Math.cos((theta * Math.PI) / 180)];
     close(Math.hypot(across / open, down), 180); // 벌린 방향까지 합친 실제 허벅지 길이
   }
@@ -285,4 +286,19 @@ test("정강이를 20°만 기울이는 사용자가 정답 마네킹의 상체�
   poses.forEach((body, i) => session.processFrame(fakeLandmarks(body), WIDTH, HEIGHT, i * 33));
   assert.equal(session.stats.reps, 1);
   assert.equal(session.stats.errors.squat.torsoLean, 0);
+});
+
+test("팔꿈치를 45° 벌린 푸시업 정답 자세: 같은 팔꿈치 각에서 어깨가 더 내려가고 아래팔이 더 곧게 선다", () => {
+  assert.equal(ELBOW_OUT_ANGLE, 45);
+  const reference = createPushupReference(PRONE_BODY);
+  const top = PRONE_ANKLE.y - reference.pose(PRONE_ANKLE, 180).shoulder.y;
+  const heightAt = (alpha) => (PRONE_ANKLE.y - reference.pose(PRONE_ANKLE, alpha).shoulder.y) / top;
+  // 팔꿈치를 벌리지 않으면 90°에서 어깨가 팔을 편 높이의 70%, 60°에서 47%에 머물렀다
+  assert.ok(heightAt(90) < 0.63, `90°: ${heightAt(90)}`);
+  assert.ok(heightAt(REFERENCE_PUSHUP_BOTTOM) < 0.43, `60°: ${heightAt(REFERENCE_PUSHUP_BOTTOM)}`);
+  const bottom = reference.pose(PRONE_ANKLE, REFERENCE_PUSHUP_BOTTOM);
+  const forearmTilt = (Math.atan2(bottom.wrist.x - bottom.elbow.x, bottom.wrist.y - bottom.elbow.y) * 180) / Math.PI;
+  assert.ok(forearmTilt > 0 && forearmTilt < 30, `아래팔 기울기 ${forearmTilt}`); // 벌리지 않으면 42°
+  // 깊이를 따라 어깨가 고르게 내려간다
+  for (let alpha = 180; alpha > REFERENCE_PUSHUP_BOTTOM; alpha -= 5) assert.ok(heightAt(alpha - 5) < heightAt(alpha), `${alpha}°`);
 });
