@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createBodyMeasure } from "../../static/tracker/js/body-measure.js";
-import { MEASURE_FRAMES, PUSHUP, SHIN_MAX, TRUNK_EXTRA_MAX } from "../../static/tracker/js/config.js";
+import { MEASURE_FRAMES, REFERENCE_PUSHUP_BOTTOM, SHIN_MAX, TRUNK_EXTRA_MAX } from "../../static/tracker/js/config.js";
 import { angleAt } from "../../static/tracker/js/geometry.js";
 import {
   createPlankReference,
@@ -138,7 +138,7 @@ test("스쿼트: 짧은 다리·긴 다리·표준 체형의 결과가 스냅샷
 // 엎드린 자세 체형 (px). fake-landmarks.js proneBody의 길이와 같다 (오른쪽이 머리). 손과 발목이 같은 높이다
 const PRONE_BODY = { lengths: { upperArm: 130, forearm: 130, leg: 300, torso: 300, head: 60 }, facing: 1, floorDrop: 0 };
 const PRONE_ANKLE = { x: 200, y: 600 };
-const ELBOW_ANGLES = Array.from({ length: 91 }, (_, i) => 90 + i); // 90~180
+const ELBOW_ANGLES = Array.from({ length: 121 }, (_, i) => 60 + i); // 60~180 (REFERENCE_PUSHUP_BOTTOM ~ 팔 펴짐)
 
 test("푸시업: 팔을 다 폈을 때 손목이 어깨 바로 아래 바닥에 있다", () => {
   const pose = createPushupReference(PRONE_BODY).pose(PRONE_ANKLE, 180);
@@ -172,9 +172,10 @@ test("푸시업: 팔을 굽힐수록 어깨가 내려가고, 팔꿈치는 발 �
   assert.ok(bottom.elbow.y < bottom.wrist.y);
 });
 
-test("푸시업: 팔꿈치 각은 바닥 기준(90°)~180°로 자르고, 보는 방향을 바꾸면 좌우 대칭이다", () => {
+test("푸시업: 팔꿈치 각은 가슴이 바닥 가까이(60°)~180°로 자르고, 보는 방향을 바꾸면 좌우 대칭이다", () => {
   const reference = createPushupReference(PRONE_BODY);
-  assert.deepEqual(reference.pose(PRONE_ANKLE, 60), reference.pose(PRONE_ANKLE, PUSHUP.BOTTOM_MAX));
+  assert.equal(REFERENCE_PUSHUP_BOTTOM, 60);
+  assert.deepEqual(reference.pose(PRONE_ANKLE, 40), reference.pose(PRONE_ANKLE, REFERENCE_PUSHUP_BOTTOM));
   assert.deepEqual(reference.pose(PRONE_ANKLE, 200), reference.pose(PRONE_ANKLE, 180));
   const right = reference.pose(PRONE_ANKLE, 120);
   const left = createPushupReference({ ...PRONE_BODY, facing: -1 }).pose(PRONE_ANKLE, 120);
