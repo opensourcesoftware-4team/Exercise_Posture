@@ -87,7 +87,7 @@ test("스쿼트: 허벅지를 1.3배로 늘리면 같은 깊이에서 상체가 
   const body = SQUAT_BODIES.standard;
   const longer = { ...body, lengths: { ...body.lengths, thigh: body.lengths.thigh * 1.3 } };
   const [base, long] = [createSquatReference(body), createSquatReference(longer)];
-  assert.ok(long.thetaMax < base.thetaMax);
+  assert.ok(long.thetaMax <= base.thetaMax); // 둘 다 목표 깊이(90°)까지 가면 최대 깊이는 같을 수 있다 (명세: 상체가 더 숙여지거나 최대 깊이가 작아진다)
   // 허벅지가 거의 서 있는 얕은 깊이에서는 길이가 엉덩이를 뒤로 보내지 않아서, 허벅지가 기운 30°부터 비교한다
   for (let theta = 30; theta <= long.thetaMax; theta += 1) {
     assert.ok(long.angles(theta).torso > base.angles(theta).torso, `θ${theta}`);
@@ -118,11 +118,11 @@ test("스쿼트: F4로 잰 측정값을 그대로 넣을 수 있다", () => {
 
 // 체형 3세트 결과 스냅샷 (명세 12장). 설정값(SHIN_MAX 등)이나 계산을 바꾸면 이 값을 다시 만든다.
 // 값: thetaMax, 깊이 40°·70°의 정강이·상체 기울기 (소수 첫째 자리). 긴 다리는 70°에서 정강이가 상한(40°)에 걸려 상체를 더 숙인다
-// 무릎 벌림 30°(KNEE_OUT_ANGLE) 전에는 긴 다리 체형이 77°에서 멈추고 바닥에서 상체를 49°까지 숙였다
+// 무릎 벌림(KNEE_OUT_ANGLE)이 없을 때는 긴 다리 체형이 77°에서 멈추고 바닥에서 상체를 49°까지 숙였다. 30°일 때 바닥 상체는 34°/32°/37°였다
 const SQUAT_SNAPSHOT = {
-  standard: { thetaMax: 90, at40: { shin: 24.2, torso: 24.2 }, at70: { shin: 32.7, torso: 32.7 }, bottom: { shin: 34.3, torso: 34.3 } },
-  shortLegs: { thetaMax: 90, at40: { shin: 23.4, torso: 23.4 }, at70: { shin: 31, torso: 31 }, bottom: { shin: 32.4, torso: 32.4 } },
-  longLegs: { thetaMax: 90, at40: { shin: 26.2, torso: 26.2 }, at70: { shin: 35.5, torso: 35.5 }, bottom: { shin: 37.2, torso: 37.2 } },
+  standard: { thetaMax: 90, at40: { shin: 22, torso: 22 }, at70: { shin: 27.3, torso: 27.3 }, bottom: { shin: 28.1, torso: 28.1 } },
+  shortLegs: { thetaMax: 90, at40: { shin: 21.3, torso: 21.3 }, at70: { shin: 26.1, torso: 26.1 }, bottom: { shin: 26.9, torso: 26.9 } },
+  longLegs: { thetaMax: 90, at40: { shin: 23.7, torso: 23.7 }, at70: { shin: 29.5, torso: 29.5 }, bottom: { shin: 30.4, torso: 30.4 } },
 };
 
 test("스쿼트: 짧은 다리·긴 다리·표준 체형의 결과가 스냅샷과 같다", () => {
@@ -250,7 +250,7 @@ test("플랭크: 팔꿈치·손목은 발목보다 floorDrop만큼 아래 바닥
 });
 
 test("무릎을 바깥으로 연 허벅지: 옆에서 본 길이는 앞뒤 성분만 cos(벌림 각)만큼 줄고, 3D 길이와 화면 각도는 그대로다", () => {
-  assert.equal(KNEE_OUT_ANGLE, 30);
+  assert.equal(KNEE_OUT_ANGLE, 45);
   const open = Math.cos((KNEE_OUT_ANGLE * Math.PI) / 180);
   close(sideThigh(180, 0), 180); // 서 있으면 측정 길이 그대로
   close(sideThigh(180, 90), 180 * open); // 허벅지가 수평이면 앞뒤 길이만 남는다
