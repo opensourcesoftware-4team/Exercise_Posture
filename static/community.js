@@ -1,4 +1,4 @@
-import { listPosts, getPost, createPost, listComments, createComment, listRecords, requestKey } from './community-api.js';
+import { listPosts, getPost, createPost, deletePost, listComments, createComment, listRecords, requestKey } from './community-api.js';
 
 const $ = id => document.getElementById(id);
 const labels = {squat: '스쿼트', pushup: '푸시업', plank: '플랭크', other: '기타'};
@@ -10,6 +10,8 @@ let notice = '';
 let currentPostId = null;
 let commentSubmitting = false;
 let commentPending = null;
+let deleting = false;
+const PIN_PATTERN = /^[0-9]{4}$/;
 
 function element(tag, className, text) {
     const node = document.createElement(tag);
@@ -152,7 +154,7 @@ async function renderDetail(id, token) {
     container.replaceChildren(element('p', '', '게시글을 불러오고 있습니다…'));
     $('community-comments').hidden = true;
     try {
-        const {post} = await getPost(id);
+        const {post, can_admin_delete: canAdminDelete} = await getPost(id);
         if (token !== generation) return;
         if (currentPostId !== post.id) resetCommentForm();
         currentPostId = post.id;
@@ -162,13 +164,98 @@ async function renderDetail(id, token) {
         title.tabIndex = -1;
         container.replaceChildren(element('span', `community-tag community-tag-${post.exercise_type}`, labels[post.exercise_type]),
             title, meta, ...(post.record ? [recordCard(post.record)] : []),
-            element('div', 'community-body', post.content));
+            element('div', 'community-body', post.content), deleteSection(post, canAdminDelete, token));
         title.focus({preventScroll: true});
         $('community-comments').hidden = false;
         renderComments(post.id, token);
     } catch (error) {
         if (token === generation) errorView(container, error);
     }
+}
+// 게시글 삭제 영역. 서버 PC는 확인만, 다른 기기는 작성할 때 정한 PIN을 입력해 삭제한다.
+function deleteSection(post, canAdminDelete, token) {
+    const section = element('div', 'community-delete');
+    if (!canAdminDelete && !post.has_delete_pin) {
+        section.append(element('p', 'community-delete-note', '삭제 PIN 없이 작성된 글이라 서버 PC에서만 삭제할 수 있어요.'));
+        return section;
+    }
+    const open = element('button', 'community-button community-danger-outline', '게시글 삭제');
+    open.type = 'button';
+    const form = element('form', 'community-delete-form');
+    form.noValidate = true;
+    form.hidden = true;
+    form.append(element('p', 'community-delete-warning',
+        '삭제하면 댓글과 첨부한 운동 기록까지 함께 지워지고 되돌릴 수 없어요.'));
+    let pin = null;
+    const error = element('p', 'community-field-error');
+    error.id = 'community-delete-error';
+    if (!canAdminDelete) {
+        const label = element('label', '', '삭제 PIN');
+        label.htmlFor = 'community-delete-pin';
+        pin = element('input');
+        Object.assign(pin, {id: 'community-delete-pin', type: 'password', inputMode: 'numeric',
+            autocomplete: 'off', maxLength: 4, placeholder: '숫자 4자리'});
+        pin.setAttribute('aria-describedby', 'community-delete-error');
+        form.append(label, pin);
+    }
+    const cancel = element('button', 'community-button community-secondary', '취소');
+    cancel.type = 'button';
+    const submit = element('button', 'community-button community-danger', '삭제하기');
+    submit.type = 'submit';
+    const actions = element('div', 'community-form-actions');
+    actions.append(cancel, submit);
+    form.append(error, actions);
+    open.onclick = () => {
+        form.hidden = false;
+        open.hidden = true;
+        (pin || submit).focus();
+    };
+    cancel.onclick = () => {
+        form.hidden = true;
+        open.hidden = false;
+        error.textContent = '';
+        if (pin) { pin.value = ''; pin.removeAttribute('aria-invalid'); }
+        open.focus();
+    };
+    form.addEventListener('submit', async event => {
+        event.preventDefault();
+        if (deleting) return;
+        error.textContent = '';
+        pin?.removeAttribute('aria-invalid');
+        if (pin && !PIN_PATTERN.test(pin.value)) {
+            error.textContent = '삭제 PIN은 숫자 4자리로 입력해 주세요.';
+            pin.setAttribute('aria-invalid', 'true');
+            pin.focus();
+            return;
+        }
+        deleting = true;
+        submit.disabled = cancel.disabled = true;
+        submit.textContent = '삭제 중…';
+        try {
+            await deletePost(post.id, pin ? {delete_pin: pin.value} : {});
+            notice = '게시글이 삭제되었습니다.';
+            // 응답을 기다리는 동안 다른 화면으로 옮겼다면 화면은 그대로 둔다.
+            if (token === generation) location.hash = listHash;
+        } catch (failure) {
+            error.textContent = failure.fields?.delete_pin || failure.message;
+            if (pin) {
+                pin.value = '';
+                pin.setAttribute('aria-invalid', 'true');
+                pin.focus();
+            }
+            // 잠김(423)·PIN 없음(403)·이미 삭제됨(404)은 다시 시도해도 소용없으므로 버튼을 막는다.
+            if ([404, 423].includes(failure.status) || (failure.status === 403 && !failure.fields?.delete_pin)) {
+                submit.hidden = true;
+                if (pin) pin.disabled = true;
+            }
+        } finally {
+            deleting = false;
+            submit.disabled = cancel.disabled = false;
+            submit.textContent = '삭제하기';
+        }
+    });
+    section.append(open, form);
+    return section;
 }
 async function renderComments(postId, token) {
     const list = $('community-comment-list');
@@ -221,7 +308,7 @@ function renderRoute() {
         $('community-detail-content').replaceChildren(element('p', 'community-error', '잘못된 게시글 주소입니다.'));
     }
 }
-function clearErrors(prefix = 'community', keys = ['nickname', 'title', 'exercise_type', 'content', 'record_id']) {
+function clearErrors(prefix = 'community', keys = ['nickname', 'title', 'exercise_type', 'content', 'record_id', 'delete_pin']) {
     for (const key of keys) {
         $(`${prefix}-error-${key}`).textContent = '';
         $(`${prefix}-${key}`).removeAttribute('aria-invalid');
@@ -271,6 +358,7 @@ $('community-form').addEventListener('submit', async event => {
     const errors = validateText(data, [['nickname', '닉네임', 20], ['title', '제목', 100], ['content', '내용', 5000]]);
     if (!labels[data.exercise_type]) errors.exercise_type = '운동 종류를 선택해 주세요.';
     data.record_id = data.record_id || null;
+    if (!PIN_PATTERN.test(data.delete_pin || '')) errors.delete_pin = '삭제 PIN은 숫자 4자리로 입력해 주세요.';
     if (Object.keys(errors).length) { fieldErrors(errors); return; }
     const serialized = JSON.stringify(data);
     if (!pending || pending.serialized !== serialized) pending = {serialized, key: requestKey()};

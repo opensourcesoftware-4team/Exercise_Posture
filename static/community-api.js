@@ -33,6 +33,10 @@ export const getPost = id => request(`/posts/${id}`);
 export const createPost = (post, key) => request('/posts', {
     method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify(post),
 });
+// 게시글 삭제. 서버 PC는 빈 객체, 다른 기기는 {delete_pin: '1234'}를 보낸다.
+export const deletePost = (id, body) => request(`/posts/${id}`, {
+    method: 'DELETE', body: JSON.stringify(body),
+});
 // 운동 기록 API(records.py)는 기존 대시보드와 같은 것을 그대로 쓴다. 최신순으로 온다.
 export const listRecords = () => request('/records');
 export const listComments = postId => request(`/posts/${postId}/comments`);
