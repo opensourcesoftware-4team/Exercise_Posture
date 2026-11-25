@@ -18,8 +18,11 @@ export const MEASURE_MIN_VALID = 30; // 이 중 유효 프레임이 이보다 �
 export const MEASURE_STANCE_MIN = 1.0; // 스쿼트: 두 발목 사이 거리가 어깨 너비의 이 배 이상일 때만 잰다 (3D 추정 좌표)
 export const MEASURE_TURN_MAX = 15; // 스쿼트: 몸이 정측면(카메라와 90°)에서 이 각도(°) 이내로 돌아가 있을 때만 잰다 (3D 추정 좌표)
 
-// 추가 기능 F5: 체형 맞춤 정답 자세 (스쿼트). 푸시업 정답 자세는 PUSHUP.BOTTOM_MAX까지 내려간다
+// 추가 기능 F5: 체형 맞춤 정답 자세
 export const DEPTH_TARGET = 90; // 정답 동작이 보여 주는 최대 허벅지-수직 각 (허벅지 수평)
+// 푸시업 정답 자세의 가장 깊은 팔꿈치 각. 통과 기준(PUSHUP.BOTTOM_MAX 90°)에서 멈추면 어깨가 팔을 편 높이의 70%에 머물러 얕아 보여서,
+// 가슴이 바닥 가까이 내려가는 60°(어깨 높이 약 50%)까지 보여 준다 (팀 설정값, 11/25). 판정 기준은 그대로다
+export const REFERENCE_PUSHUP_BOTTOM = 60;
 export const SHIN_MAX = 40; // 정답 자세의 정강이 기울기 상한 (팀 설정값. 명세 30°로는 정답 자세가 통과 깊이 70°에 못 미쳐 11/12 40°로 올림)
 export const TRUNK_EXTRA_MAX = 10; // 정강이 상한에 걸렸을 때 상체를 정강이보다 더 숙일 수 있는 한도
 // 무게중심 계산용 분절 질량비 (Winter): 머리·팔·몸통 / 허벅지 양쪽 / 정강이 양쪽. 발은 바닥에 있어 뺀다
@@ -38,7 +41,9 @@ export const REFERENCE_TORSO_LIMIT = 15; // 스쿼트 상체 기울기: 문헌 1
 export const REFERENCE_ELBOW_LIMIT = 15; // 플랭크 위팔 기울기: 팔꿈치는 어깨 바로 아래 ±10°(HANDOFF 7.4 선택 항목) + 측정 여유 5° (팀 설정값)
 
 // 추가 기능 F7: 따라 하기 (정답 뼈대 자동 재생)
-export const PLAYBACK_PERIOD_SECONDS = 4; // 1배속 반복 한 번 (내려가기 2초, 올라오기 2초)
+// 1배속 반복 한 번 (내려가기·올라오기 각 1.6초). 명세 4초는 느려서 1.25배 빠르게 했다 (팀 설정값, 11/25)
+export const PLAYBACK_PERIOD_SECONDS = 3.2;
+export const PLAYBACK_REFERENCE_ALPHA = 0.8; // 따라 하기 정답 마네킹 불투명도. 맞춰 보기(0.45)보다 진하게 보여 준다 (팀 설정값, 11/25)
 export const PLAYBACK_SPEEDS = [0.5, 0.75, 1]; // 배속 선택지
 export const PLAYBACK_SPEED_DEFAULT = 0.75;
 

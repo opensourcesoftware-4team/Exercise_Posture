@@ -1,7 +1,15 @@
 // 체형 맞춤 정답 자세 계산기 (추가 기능 F5). F4에서 잰 몸 길이로, 깊이마다 그 사람에게 맞는 정답 관절 좌표를 만든다.
 // 카메라와 DOM을 쓰지 않는 순수 함수다. 좌표는 픽셀이고 y는 아래로 갈수록 커진다.
 // 계산은 "발목이 원점이고 사람이 +x 쪽을 보는" 기준 좌표에서 하고, 마지막에 보는 방향과 발목 위치로 옮긴다.
-import { DEPTH_TARGET, MASS_HAT, MASS_SHANK, MASS_THIGH, PUSHUP, SHIN_MAX, TRUNK_EXTRA_MAX } from "./config.js";
+import {
+  DEPTH_TARGET,
+  MASS_HAT,
+  MASS_SHANK,
+  MASS_THIGH,
+  REFERENCE_PUSHUP_BOTTOM,
+  SHIN_MAX,
+  TRUNK_EXTRA_MAX,
+} from "./config.js";
 
 const RADIANS_PER_DEGREE = Math.PI / 180;
 const BISECTION_STEPS = 20; // 이분 탐색 횟수 (30° 범위를 0.00003°까지 좁힌다)
@@ -129,9 +137,9 @@ export function createPushupReference(body) {
   const wrist = { x: Math.sqrt(Math.max(0, length * length - (arm - body.floorDrop) ** 2)), y: body.floorDrop };
 
   return {
-    // 발목 ankle(px)에 맞춘 팔꿈치 각 elbowAngle(°)의 정답 관절 좌표. 각은 PUSHUP.BOTTOM_MAX(바닥)~180으로 자른다
+    // 발목 ankle(px)에 맞춘 팔꿈치 각 elbowAngle(°)의 정답 관절 좌표. 각은 REFERENCE_PUSHUP_BOTTOM(바닥)~180으로 자른다
     pose(ankle, elbowAngle) {
-      const alpha = clamp(elbowAngle, PUSHUP.BOTTOM_MAX, 180) * RADIANS_PER_DEGREE;
+      const alpha = clamp(elbowAngle, REFERENCE_PUSHUP_BOTTOM, 180) * RADIANS_PER_DEGREE;
       const reach = Math.sqrt(upperArm ** 2 + forearm ** 2 - 2 * upperArm * forearm * Math.cos(alpha)); // 손목–어깨
       const shoulder = circleIntersections(ORIGIN, length, wrist, reach).reduce((a, b) => (a.y < b.y ? a : b)); // 위쪽
       // 팔꿈치는 손목·어깨에서 각각 아래팔·위팔 길이인 점 중 발 쪽(뒤)이다

@@ -36,9 +36,17 @@ export function createReferenceFollow(exercise, body) {
     get thetaMax() {
       return references[body.facing].thetaMax;
     },
-    // 스쿼트 정강이 상한(°)을 바꿔 정답 자세를 다시 만든다 (F9 발목 상한 개인화). null이면 SHIN_MAX로 돌린다
+    // 스쿼트 정강이 상한(°)을 바꿔 정답 자세를 다시 만든다 (F9 발목 상한 개인화). null이면 SHIN_MAX로 돌린다.
+    // 낮춘 상한으로는 정답 자세가 통과 깊이(SQUAT.PASS_MIN)까지 못 내려가면, 내려갈 때까지 1°씩 올린다 (SHIN_MAX까지).
+    // 정답 마네킹이 판정의 통과 깊이보다 얕으면 맞춰 보기·따라 하기가 판정과 어긋나기 때문이다. 실제로 쓴 상한을 돌려준다
     setShinMax(shinMax) {
-      references = build(shinMax ?? SHIN_MAX);
+      let limit = shinMax ?? SHIN_MAX;
+      references = build(limit);
+      while (limit < SHIN_MAX && references[body.facing].thetaMax < SQUAT.PASS_MIN) {
+        limit = Math.min(SHIN_MAX, limit + 1);
+        references = build(limit);
+      }
+      return limit;
     },
     poseAt, // 따라 하기(F7)도 같은 정답 자세를 쓴다
     // 스쿼트만: 깊이 depth(°)의 정답 기울기 { thigh, shin, torso } (°). 깊이는 0~thetaMax로 자른다 (마네킹 대비 상체 안내)

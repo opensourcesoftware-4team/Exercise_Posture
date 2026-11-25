@@ -1,6 +1,6 @@
 // 뼈대 캔버스에 지표 색(추가 기능 F2), 스쿼트 깊이 안내선(F3), 정답 뼈대(F6), 마네킹(F8)을 그린다.
 // 이 캔버스는 CSS로 거울처럼 뒤집혀 보이므로 글자는 쓰지 않는다. 글자는 panel.js가 HTML로 쓴다.
-import { REFERENCE_ALPHA, REFERENCE_GLOW_ALPHA, USER_MANNEQUIN_ALPHA } from "./config.js";
+import { PLAYBACK_REFERENCE_ALPHA, REFERENCE_ALPHA, REFERENCE_GLOW_ALPHA, USER_MANNEQUIN_ALPHA } from "./config.js";
 import { depthZone, guideLine } from "./depth.js";
 import { mannequinParts } from "./mannequin.js";
 import { displayStage } from "./modes.js";
@@ -128,8 +128,9 @@ export function drawOverlay(context, exercise, view, mode, mannequin) {
 }
 
 // 정답 뼈대 (F6·F8): 반투명 초록 마네킹. 사용자 뼈대보다 먼저(아래에) 그린다. glowing이면 잠깐 밝게 그린다
-// warnParts: 주황으로 칠할 부위 (마네킹 대비 상체가 어긋나면 몸통)
-export function drawReference(context, points, glowing, warnParts = []) {
+// warnParts: 주황으로 칠할 부위 (마네킹 대비 안내가 어긋난 부위), playing: 따라 하기 중이면 더 진하게 그린다
+export function drawReference(context, points, glowing, warnParts = [], playing = false) {
   const colorOf = (part) => (warnParts.includes(part) ? STAGE_COLORS.warn : STAGE_COLORS.good);
-  drawMannequin(context, points, colorOf, glowing ? REFERENCE_GLOW_ALPHA : REFERENCE_ALPHA);
+  const alpha = playing ? PLAYBACK_REFERENCE_ALPHA : REFERENCE_ALPHA;
+  drawMannequin(context, points, colorOf, glowing ? Math.max(REFERENCE_GLOW_ALPHA, alpha) : alpha);
 }
