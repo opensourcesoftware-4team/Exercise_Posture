@@ -38,7 +38,8 @@ function footAngle(heel, toe) {
 
 // 팔 기울기: 어깨→손목 선과 수직선(아래) 사이의 각. 손목이 머리 쪽(엉덩이→어깨 방향)이면 +, 발 쪽이면 -다.
 // 0°면 손이 어깨 바로 아래에 있다. 푸시업에서 몸이 기울어 있어도 바닥 기준으로 잰다.
-function armLean(shoulder, wrist, hip) {
+// 손목 대신 팔꿈치를 넣으면 위팔 기울기다 (플랭크 마네킹 대비 팔꿈치, reference-guide.js)
+export function armLean(shoulder, wrist, hip) {
   const headward = Math.sign(shoulder.x - hip.x);
   return Math.atan2((wrist.x - shoulder.x) * headward, wrist.y - shoulder.y) * DEGREES_PER_RADIAN;
 }

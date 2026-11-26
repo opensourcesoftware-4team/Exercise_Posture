@@ -5,8 +5,9 @@ import { displayStage } from "./modes.js";
 
 // 종목마다 패널에 보여 줄 지표와, 부호(+/−)를 붙여 보여 줄 지표
 const ROWS = { squat: ["torsoShin", "heelRise"], pushup: ["bodyLine", "armLean"], plank: ["bodyLine", "neck"] };
-const REFERENCE_ROWS = { squat: ["referenceTorso"] }; // 마네킹과 비교하는 모드(modes.js referenceTorso)에서만 더하는 줄
-const SIGNED = ["torsoShin", "heelRise", "armLean", "referenceTorso"];
+// 마네킹과 비교하는 모드(modes.js referenceGuide)에서만 더하는 줄 (reference-guide.js)
+const REFERENCE_ROWS = { squat: ["referenceTorso"], pushup: ["referenceHead"], plank: ["referenceElbow"] };
+const SIGNED = ["torsoShin", "heelRise", "armLean", "referenceTorso", "referenceHead", "referenceElbow"];
 
 function formatValue(key, value) {
   const rounded = Math.round(value);
@@ -40,7 +41,7 @@ export function createPanel(elements) {
       mode = nextMode;
       rows = {};
       elements.indicators.replaceChildren();
-      const keys = [...ROWS[exercise], ...(mode.referenceTorso ? (REFERENCE_ROWS[exercise] ?? []) : [])];
+      const keys = [...ROWS[exercise], ...(mode.referenceGuide ? REFERENCE_ROWS[exercise] : [])];
       for (const key of keys) {
         const row = document.createElement("div");
         row.className = "indicator";

@@ -22,7 +22,10 @@ const SEGMENTS = {
     ["elbow", "wrist"],
   ],
   neck: [["ear", "shoulder"]],
-  referenceTorso: [], // 마네킹 대비 상체는 사용자 뼈대가 아니라 정답 마네킹의 몸통을 칠한다 (drawReference)
+  // 마네킹 대비 지표는 사용자 뼈대가 아니라 정답 마네킹의 그 부위를 칠한다 (REFERENCE_PARTS, drawReference)
+  referenceTorso: [],
+  referenceHead: [],
+  referenceElbow: [],
 };
 
 // 마네킹에서 지표마다 색칠할 부위 (mannequin.js의 부위 이름). 선 뼈대의 SEGMENTS와 같은 곳이다
@@ -33,10 +36,12 @@ const PARTS = {
   armLean: ["upperArm", "forearm"],
   neck: ["head"],
   referenceTorso: [],
+  referenceHead: [],
+  referenceElbow: [],
 };
 
-// 정답 마네킹에서 지표마다 주황으로 칠할 부위 (마네킹 대비 상체 안내)
-const REFERENCE_PARTS = { referenceTorso: ["torso"] };
+// 정답 마네킹에서 지표마다 주황으로 칠할 부위 (마네킹 대비 안내: 스쿼트 상체, 푸시업 고개, 플랭크 위팔)
+const REFERENCE_PARTS = { referenceTorso: ["torso"], referenceHead: ["head"], referenceElbow: ["upperArm"] };
 
 // 정답 마네킹에서 주황으로 칠할 부위: 정답 마네킹과 비교하는 지표가 초록이 아닌 부위
 export function referenceWarnParts(indicators) {
