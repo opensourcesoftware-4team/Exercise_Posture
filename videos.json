@@ -1,0 +1,52 @@
+{
+  "videos": [
+    {
+      "id": "vid_squat_torso_lean",
+      "exercise": "squat",
+      "body_part": "torso_core",
+      "category": "alignment",
+      "title": "스쿼트 상체 숙임 교정 가이드",
+      "url": "https://youtu.be/UZ94OIkuB5w?si=GUO6ZzVgasAu5rEi"
+    },
+    {
+      "id": "vid_squat_lower_body_alignment",
+      "exercise": "squat",
+      "body_part": "shin_ankle_knee",
+      "category": "hip_hinge_stability",
+      "title": "스쿼트 정강이·발목·무릎 정렬 가이드",
+      "url": "https://youtube.com/shorts/AYlPc7xjRSg?si=mzULlxzPQ0re3b7n"
+    },
+    {
+      "id": "vid_squat_partial_rep",
+      "exercise": "squat",
+      "body_part": "hip_thigh",
+      "category": "rom",
+      "title": "스쿼트 가동범위 확보 가이드",
+      "url": "https://youtube.com/shorts/TaE-2E7b52k?si=KBACe78hfE21WayN"
+    },
+    {
+      "id": "vid_pushup_form_core",
+      "exercise": "pushup",
+      "body_part": "core_shoulder_wrist",
+      "category": "stability_alignment_rom",
+      "title": "푸시업 코어·손 위치·가동범위 가이드",
+      "url": "https://youtube.com/shorts/IGA9a1RVScU?si=ED6ZlN9tBBZ-BN0D"
+    },
+    {
+      "id": "vid_pushup_core_high",
+      "exercise": "pushup",
+      "body_part": "hip_core",
+      "category": "alignment",
+      "title": "푸시업 엉덩이 들림 교정 가이드",
+      "url": "https://youtube.com/shorts/IGA9a1RVScU?si=ED6ZlN9tBBZ-BN0D4"
+    },
+    {
+      "id": "vid_plank_alignment_core",
+      "exercise": "plank",
+      "body_part": "core_hip_neck",
+      "category": "stability_alignment",
+      "title": "플랭크 엉덩이·목 정렬 가이드",
+      "url": "https://youtube.com/shorts/mUDVAgXyqZg?si=0Cglo_MKhHhjVq43"
+    }
+  ]
+}

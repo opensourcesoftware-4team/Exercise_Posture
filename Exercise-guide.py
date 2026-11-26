@@ -1,5 +1,10 @@
 import json
 import re
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
+DEFAULT_VIDEOS_PATH = BASE_DIR / "data" / "videos.json"
+DEFAULT_ERROR_CONTENT_PATH = BASE_DIR / "data" / "error_content.json"
 
 
 def to_youtube_embed_url(url):
@@ -39,13 +44,47 @@ def get_video_section_html(video_url):
     return '<p class="video-placeholder">가이드 영상 준비 중</p>'
 
 
+def load_videos_catalog(videos_path=DEFAULT_VIDEOS_PATH):
+    """
+    영상 데이터 파일(videos.json)을 읽어 id를 키로 하는 딕셔너리로 반환합니다.
+    """
+    with open(videos_path, "r", encoding="utf-8") as f:
+        raw = json.load(f)
+
+    items = raw.get("videos", raw) if isinstance(raw, dict) else raw
+    catalog = {}
+    for item in items:
+        vid = item.get("id")
+        if vid:
+            url = item.get("url", "")
+            catalog[vid] = {
+                "id": vid,
+                "exercise": item.get("exercise", ""),
+                "body_part": item.get("body_part", ""),
+                "category": item.get("category", ""),
+                "title": item.get("title", ""),
+                "url": url,
+                "embed_url": to_youtube_embed_url(url),
+                "video_html": get_video_section_html(url),
+            }
+    return catalog
+
+
+def load_error_content(content_path=DEFAULT_ERROR_CONTENT_PATH):
+    """
+    오답 콘텐츠 데이터 파일(error_content.json)을 읽어 반환합니다.
+    """
+    with open(content_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
 def get_all_errors_info(data_source):
     """
-    파일 경로(str), Flask API 응답 데이터(list), 또는 백엔드 storage.load_records() 결과(list)를 받아
+    파일 경로(str/Path), Flask API 응답 데이터(list), 또는 백엔드 storage.load_records() 결과(list)를 받아
     모든 운동의 오답 횟수를 집계하고 내림차순으로 정렬하여 반환합니다.
     """
-    if isinstance(data_source, str):
-        with open(data_source, 'r', encoding='utf-8') as f:
+    if isinstance(data_source, (str, Path)):
+        with open(data_source, "r", encoding="utf-8") as f:
             data = json.load(f)
     else:
         data = data_source
@@ -75,228 +114,70 @@ def get_routine_by_count(info, count):
     if count >= 5:
         return {
             "level": "🔴 5회 이상 (집중 교정 루틴 — 근본 원인 해결 및 패턴 재교육)",
-            "routine": routines.get("5_plus", "기본 자세 가이드를 다시 확인해 주세요.")
+            "routine": routines.get("5_plus", "기본 자세 가이드를 다시 확인해 주세요."),
         }
     elif 2 <= count <= 4:
         return {
             "level": "🟡 2~4회 (보완 교정 루틴 — 가동성 확보 및 타겟 근육 활성화)",
-            "routine": routines.get("2_4", "기본 자세 가이드를 다시 확인해 주세요.")
+            "routine": routines.get("2_4", "기본 자세 가이드를 다시 확인해 주세요."),
         }
     else:  # count == 1
         return {
             "level": "🟢 1회 (자세 인지 루틴 — 즉시 교정 및 코칭 큐 리허설)",
-            "routine": routines.get("1", "기본 자세 가이드를 다시 확인해 주세요.")
+            "routine": routines.get("1", "기본 자세 가이드를 다시 확인해 주세요."),
         }
 
 
-# 운동별 가이드 데이터 딕셔너리 (shinLean 리뷰어 피드백, 3단계 루틴, 유튜브 링크 지원 반영 완료)
-# "video" 항목에 유튜브 링크(예: "https://www.youtube.com/watch?v=...")를 넣으면 자동으로 임베드 영상으로 변환됩니다.
-error_info = {
-    "squat": {
-        "torsoLean": {
-            "description": "현재 스쿼트 동작 시 상체가 앞으로 너무 많이 숙여지고 있습니다!",
-            "cause": "배와 허리에 버티는 힘이 부족하거나, 발목과 골반이 뻣뻣해서 중심을 잡으려고 상체를 앞으로 숙이게 됩니다.",
-            "solution": "내려가기 전에 숨을 크게 들이마셔 배에 힘을 단단히 주고, 시선은 정면을 보며 가슴을 펴주세요. 일어날 때는 발바닥 전체로 바닥을 수직으로 밀어내듯 일어나야 합니다.",
-            "reference": "NSCA. 『Essentials of Strength Training and Conditioning (4th Ed.)』 / Aaron Horschig. 『The Squat Bible』",
-            "routines": {
-                "1": "[즉시 인지 루틴] 다음 세트 시작 전 숨을 크게 들이마셔 배를 단단히 조이는 '복압 브레이싱(Abdominal Bracing)'을 3회 연습한 뒤, 정면 시선을 고정하고 발바닥 전체로 바닥을 수직으로 밀어내며 수행하세요.",
-                "2_4": "[가동성·활성화 루틴] ① 벽 보고 무릎 닿기(발목 가동성 스트레칭) 좌우 10회 → ② 양손을 가슴 앞에 모으거나 가벼운 물건을 안고 상체를 세워 수직으로 앉는 '고블릿 자세 맨몸 스쿼트' 10회 2세트로 배의 긴장과 상체 세우기를 연습하세요.",
-                "5_plus": "[집중 교정 루틴] ① 종아리 및 고관절 굴곡근 폼롤러 이완(각 1분) → ② 코어와 허리 지지력을 기르는 플랭크 브레이싱 버티기(30초×3세트) → ③ 벽을 마주 보고 서서 코와 가슴이 벽에 닿지 않게 숨을 들이마셔 배에 힘을 준 채 수직으로 앉았다 일어나는 '월 스쿼트(Wall Squat)' 10회 3세트를 수행하세요."
-            },
-            "video": "https://youtu.be/UZ94OIkuB5w?si=GUO6ZzVgasAu5rEi"
-        },
-        "shinLean": {
-            "description": "현재 스쿼트 동작 시 상체에 비해 정강이가 많이 기울어, 무릎 위주로 앉고 있습니다!",
-            "cause": "엉덩이를 뒤로 빼면서 앉지 않고 무릎부터 먼저 굽혀서 몸무게가 앞쪽으로 쏠리기 때문입니다.",
-            "solution": "상체에 비해 정강이가 많이 기울어, 무릎 위주로 앉고 있어요. 엉덩이를 뒤로 빼며 고관절을 먼저 접어보세요. 무게중심을 발가락이 아닌 발바닥 가운데와 뒤꿈치에 두어야 합니다.",
-            "reference": "Aaron Horschig. 『The Squat Bible』 / NSCA. 『Essentials of Strength Training and Conditioning (4th Ed.)』",
-            "routines": {
-                "1": "[즉시 인지 루틴] 내려가기 직전 양손으로 사타구니(고관절 접히는 부위)를 짚고, 무릎을 굽히기 전에 엉덩이를 뒤로 먼저 빼며 고관절을 접는 '힙 힌지' 동작을 3회 리허설한 뒤 발바닥 중앙과 뒤꿈치에 체중을 실어 수행하세요.",
-                "2_4": "[가동성·활성화 루틴] ① 벽에서 한 걸음 떨어져 서서 무릎을 고정한 채 엉덩이를 뒤로 빼 벽을 터치하는 '힙 힌지 월 터치' 12회 2세트 → ② 발가락에 힘을 빼고 발바닥 중앙과 뒤꿈치로 중심을 잡으며 천천히 앉는 템포 스쿼트 10회 2세트를 진행하세요.",
-                "5_plus": "[집중 교정 루틴] ① 엉덩이 근육을 깨우는 글루트 브릿지(Glute Bridge) 15회 2세트 → ② 고관절부터 접는 맨몸 루마니안 데드리프트 패턴 연습 12회 3세트 → ③ 뒤에 의자를 두고 발바닥 중앙·뒤꿈치에 무게중심을 둔 채 엉덩이를 뒤로 빼며 고관절부터 접어 앉는 '박스 스쿼트(Box Squat)' 10회 3세트를 수행하세요."
-            },
-            "video": "https://youtube.com/shorts/AYlPc7xjRSg?si=mzULlxzPQ0re3b7n"
-        },
-        "heelLift": {
-            "description": "현재 스쿼트 동작 시 발뒤꿈치가 바닥에서 들리고 있습니다!",
-            "cause": "종아리와 발목이 뻣뻣하거나 몸무게가 발 앞쪽으로 쏠려 있기 때문입니다.",
-            "solution": "운동 전에 종아리와 발목을 충분히 풀어주고, 발끝을 바깥쪽으로 살짝(15~30도) 벌려 서보세요. 앉았다 일어나는 내내 엄지발가락·새끼발가락·발뒤꿈치 세 점으로 바닥을 꾹 누르는 느낌을 유지하세요.",
-            "reference": "Aaron Horschig. 『The Squat Bible』 (발목 배측굴곡 가동성 및 트라이포드 풋 3점 지지 원리)",
-            "routines": {
-                "1": "[즉시 인지 루틴] 발끝을 바깥쪽으로 15~30도 벌려 선 뒤, 엄지발가락·새끼발가락·발뒤꿈치 세 점(트라이포드 풋)으로 바닥을 꾹 누르는 감각을 10초간 유지하고 세트를 시작하세요.",
-                "2_4": "[가동성·활성화 루틴] ① 벽이나 계단에 발끝을 대고 종아리 스트레칭 좌우 30초 → ② 반무릎 자세에서 뒤꿈치를 붙인 채 무릎을 발끝 너머로 밀어주는 '발목 가동성 스트레칭(Knee-to-Wall)' 좌우 12회 2세트 후 3점 지지를 유지하며 수행하세요.",
-                "5_plus": "[집중 교정 루틴] ① 폼롤러를 이용한 종아리·아킬레스건 주변 근막 이완(각 1분) → ② 깊은 런지 자세에서 체중을 실어 발목 앞쪽을 풀어주는 가동성 훈련 좌우 15회 2세트 → ③ 발끝을 15~30도 벌리고 엄지·새끼발가락·뒤꿈치 세 점이 절대 떨어지지 않는 높이까지만 3초에 걸쳐 천천히 내려가는 '트라이포드 템포 스쿼트' 10회 3세트를 수행하세요."
-            },
-            "video": "https://youtube.com/shorts/AYlPc7xjRSg?si=mzULlxzPQ0re3b7n"
-        },
-        "partialRep": {
-            "description": "현재 스쿼트 동작 시 충분히 깊게 앉지 못하고 있습니다!",
-            "cause": "골반과 발목이 뻣뻣하거나 허벅지 힘이 부족해서 끝까지 앉기 힘들기 때문입니다.",
-            "solution": "발을 어깨너비보다 조금 넓게 벌리고, 무릎을 발끝 방향으로 벌려 골반이 내려갈 공간을 만들어 주세요. 뒤에 낮은 의자를 두고 엉덩이가 닿을랑 말랑 할 정도(허벅지가 바닥과 수평이 될 때)까지 천천히 앉는 연습을 해보세요.",
-            "reference": "NSCA. 『Essentials of Strength Training and Conditioning (4th Ed.)』 / Aaron Horschig. 『The Squat Bible』",
-            "routines": {
-                "1": "[즉시 인지 루틴] 발을 어깨너비보다 조금 넓게 벌리고 무릎을 발끝 방향으로 열면서, 허벅지가 바닥과 수평이 되는 지점까지 내려가 1초간 멈췄다 일어나는 동작을 2회 리허설한 뒤 본 세트를 진행하세요.",
-                "2_4": "[가동성·활성화 루틴] ① 깊게 쪼그려 앉아 양 팔꿈치로 무릎 안쪽을 밀어내며 골반과 발목을 열어주는 '딥 스쿼트 홀드 스트레칭' 30초 2세트 → ② 뒤에 낮은 의자를 두고 엉덩이가 살짝 닿을랑 말랑 할 때까지 앉았다 일어나는 '터치 앤 고 의자 스쿼트' 10회 2세트를 수행하세요.",
-                "5_plus": "[집중 교정 루틴] ① 개구리 자세 고관절 스트레칭(Frog Stretch) 및 발목 스트레칭 각 1분 → ② 문틀이나 기둥을 잡고 무릎을 발끝 방향으로 벌려 허벅지가 수평이 될 때까지 깊게 앉는 '보조 어시스트 딥 스쿼트' 10회 3세트 → ③ 낮은 의자를 뒤에 두고 3초 동안 천천히 앉아 의자를 터치하고 일어나는 '네거티브 의자 스쿼트' 10회 3세트를 수행하세요."
-            },
-            "video": "https://youtube.com/shorts/TaE-2E7b52k?si=KBACe78hfE21WayN"
-        },
-        "kneeValgus": {
-            "description": "현재 스쿼트 동작 시 무릎이 안쪽으로 모이고 있습니다!",
-            "cause": "엉덩이 옆쪽 힘이 부족해서 앉았다 일어날 때 무릎을 바깥쪽으로 버텨주지 못하기 때문입니다.",
-            "solution": "양발로 바닥을 양옆으로 찢는다는 느낌으로 힘을 주고, 앉을 때와 일어날 때 모두 무릎이 두 번째 발가락 방향을 향하도록 바깥쪽으로 계속 밀어내세요.",
-            "reference": "Aaron Horschig. 『The Squat Bible』 / NSCA. 『Essentials of Strength Training and Conditioning (4th Ed.)』",
-            "routines": {
-                "1": "[즉시 인지 루틴] 선 자세에서 양발로 바닥을 양옆으로 찢는다는 느낌으로 힘을 주어 엉덩이 옆쪽이 단단해지는 것을 5초간 느낀 뒤, 무릎이 두 번째 발가락 방향을 향하도록 계속 밀어내며 세트를 수행하세요.",
-                "2_4": "[가동성·활성화 루틴] ① 옆으로 누워 발을 붙이고 위쪽 무릎을 여닫으며 엉덩이 옆쪽을 자극하는 '클램쉘(Clamshell)' 좌우 15회 2세트 → ② 반쯤 앉은 스쿼트 자세에서 양손으로 무릎 바깥쪽을 짚고 무릎으로 손을 밀어내는 버티기 10초 2세트 후 본 세트를 진행하세요.",
-                "5_plus": "[집중 교정 루틴] ① 클램쉘 및 사이드 레그 레이즈 좌우 15회 3세트(중둔근 집중 강화) → ② 반스쿼트 자세에서 무릎을 벌린 채 옆으로 걷는 '사이드 스텝 워크' 좌우 15보 3세트 → ③ 양발로 바닥을 양옆으로 찢는 힘을 유지하며 무릎을 두 번째 발가락 방향으로 맞춰 천천히 내려갔다 올라오는 '정렬 제어 템포 스쿼트' 10회 3세트를 수행하세요."
-            },
-            "video": "https://youtube.com/shorts/AYlPc7xjRSg?si=mzULlxzPQ0re3b7n"
-        }
-    },
-    "pushup": {
-        "coreDrop": {
-            "description": "현재 푸시업 동작 시 허리와 배가 아래로 처지고 있습니다!",
-            "cause": "배와 엉덩이에 힘을 꽉 주지 못해 몸이 일직선으로 유지되지 않기 때문입니다.",
-            "solution": "배에 힘을 단단히 주고 양쪽 엉덩이를 꽉 조여 머리부터 발뒤꿈치까지 하나의 단단한 나무판자처럼 일직선을 만드세요. 버티기 힘들다면 무릎을 바닥에 대고 정확한 일자 자세부터 연습해 보세요.",
-            "reference": "Stuart McGill. 『Low Back Disorders (2nd Ed.)』 / NSCA. 『Essentials of Strength Training and Conditioning (4th Ed.)』",
-            "routines": {
-                "1": "[즉시 인지 루틴] 엎드린 시작 자세에서 배에 힘을 단단히 주고 양쪽 엉덩이를 꽉 조여 머리부터 발뒤꿈치까지 단단한 나무판자 같은 일직선을 만든 채 5초간 버틴 후 동작을 시작하세요.",
-                "2_4": "[가동성·활성화 루틴] ① 누워서 허리로 바닥을 꾹 누르며 팔다리를 뻗는 '데드버그(Dead Bug)' 12회 2세트 → ② 무릎을 바닥에 대고 배와 엉덩이를 조여 머리부터 무릎까지 완벽한 일직선을 유지하는 '니 푸시업(Knee Pushup)' 10회 2세트로 전환해 연습하세요.",
-                "5_plus": "[집중 교정 루틴] ① 맥길 컬업(McGill Curl-up) 및 할로우 바디 홀드 20초 3세트로 복부 지지력 강화 → ② 배와 엉덩이를 최대로 조여 나무판자처럼 버티는 'RKC 플랭크' 20초 3세트 → ③ 무릎을 바닥에 대거나 높은 받침대를 짚고 허리가 절대 처지지 않게 일자 자세를 유지하는 단계별 푸시업 10회 3세트를 수행하세요."
-            },
-            "video": "https://youtube.com/shorts/IGA9a1RVScU?si=ED6ZlN9tBBZ-BN0D"
-        },
-        "coreHigh": {
-            "description": "현재 푸시업 동작 시 엉덩이가 위로 솟고 있습니다!",
-            "cause": "가슴과 팔의 힘이 부족해서 무의식적으로 엉덩이를 들어 올려 쉽게 버티려고 하기 때문입니다.",
-            "solution": "어깨가 손목 바로 위에 오도록 몸을 살짝 앞으로 이동시키고, 엉덩이를 내려 어깨-엉덩이-발목이 비스듬한 일직선이 되도록 맞춘 상태에서 팔을 굽히세요.",
-            "reference": "NSCA. 『Essentials of Strength Training and Conditioning (4th Ed.)』 / Stuart McGill. 『Low Back Disorders (2nd Ed.)』",
-            "routines": {
-                "1": "[즉시 인지 루틴] 시작 자세에서 몸을 살짝 앞으로 이동시켜 어깨가 손목 바로 위에 오게 맞춘 뒤, 엉덩이를 내려 어깨-엉덩이-발목이 비스듬한 일직선이 된 것을 확인하고 팔을 굽히세요.",
-                "2_4": "[가동성·활성화 루틴] ① 하이 플랭크 자세에서 어깨를 손목 바로 위에 고정하고 버티는 '하이 플랭크 홀드' 20초 2세트 → ② 무릎을 바닥에 대어 가슴·팔의 부담을 줄인 상태에서 어깨-엉덩이-무릎을 비스듬한 일직선으로 맞춰 수행하는 니 푸시업 10회 2세트를 진행하세요.",
-                "5_plus": "[집중 교정 루틴] ① 책상이나 벤치를 짚고 어깨가 손목 위에 오도록 맞춰 어깨-엉덩이-발목 일직선으로 가슴과 팔 힘을 기르는 '인클라인 푸시업(Incline Pushup)' 12회 3세트 → ② 엉덩이가 솟지 않게 일직선을 유지하며 3초 동안 천천히 내려가는 '네거티브 푸시업' 8회 3세트 → ③ 정자세 하이 플랭크 30초 3세트를 수행하세요."
-            },
-            "video": "https://youtube.com/shorts/IGA9a1RVScU?si=ED6ZlN9tBBZ-BN0D4"
-        },
-        "handForward": {
-            "description": "현재 푸시업 동작 시 손을 어깨보다 너무 앞쪽에 짚고 있습니다!",
-            "cause": "시작할 때 손을 어깨 바로 아래에 두지 않아서 어깨에 무리가 가는 상태입니다.",
-            "solution": "시작 자세를 잡을 때 손을 몸 쪽으로 한 뼘 정도 당겨서, 옆에서 봤을 때 어깨 바로 아래에 손목이 수직으로 놓이도록 짚으세요.",
-            "reference": "NSCA. 『Essentials of Strength Training and Conditioning (4th Ed.)』 (견관절-수근관절 수직 정렬 원리)",
-            "routines": {
-                "1": "[즉시 인지 루틴] 시작 자세를 잡을 때 양손을 몸 쪽으로 한 뼘 정도 당겨 짚고, 옆에서 봤을 때 어깨 바로 아래에 손목이 수직으로 놓였는지 확인한 뒤 동작을 시작하세요.",
-                "2_4": "[가동성·활성화 루틴] ① 바닥에 완전히 엎드린 상태에서 양손을 가슴 옆(어깨 수직 아래)에 두고 그대로 몸을 밀어 올리는 '핸즈 릴리즈 푸시업(Hands-Release Pushup)' 셋업 연습 8회 2세트로 정확한 손 위치를 체득하세요.",
-                "5_plus": "[집중 교정 루틴] ① 어깨 바로 아래에 손목을 수직으로 두고 날개뼈만 움직여 어깨 안정성을 기르는 '스카풀라 푸시업(Scapular Pushup)' 12회 3세트 → ② 바닥에 표시물로 어깨 수직 아래 위치를 표시해 두고 손을 맞춰 짚는 하이 플랭크 셋업 20초 3세트 → ③ 표시된 위치에 손을 고정하고 수행하는 정자세 푸시업 8~10회 3세트를 진행하세요."
-            },
-            "video": "https://youtube.com/shorts/IGA9a1RVScU?si=ED6ZlN9tBBZ-BN0D"
-        },
-        "handBackward": {
-            "description": "현재 푸시업 동작 시 손을 어깨보다 너무 뒤쪽(배 쪽)에 짚고 있습니다!",
-            "cause": "손을 몸 안쪽으로 너무 당겨 짚어서 손목이 많이 꺾이고 몸이 앞으로 쏠리기 때문입니다.",
-            "solution": "손을 가슴 옆 라인(어깨 바로 아래 위치)으로 살짝 앞으로 옮겨 짚어, 내려갔을 때 팔뚝이 바닥과 수직에 가깝게 되도록 위치를 조절하세요.",
-            "reference": "NSCA. 『Essentials of Strength Training and Conditioning (4th Ed.)』 (전완골 수직 정렬 및 손목 과신전 방지 원리)",
-            "routines": {
-                "1": "[즉시 인지 루틴] 손을 배 쪽에서 가슴 옆 라인(어깨 바로 아래 위치)으로 살짝 앞으로 옮겨 짚고, 내려갔을 때 팔뚝이 바닥과 수직에 가깝게 유지되는지 확인하며 수행하세요.",
-                "2_4": "[가동성·활성화 루틴] ① 손목 꺾임을 풀어주는 손목 굴곡·신전 스트레칭(각 20초) → ② 무릎을 대고 손을 가슴 옆 라인에 짚은 뒤, 내려간 지점에서 팔뚝이 바닥과 수직인지 확인하며 2초 멈추는 '포즈 니 푸시업(Pause Knee Pushup)' 8회 2세트를 수행하세요.",
-                "5_plus": "[집중 교정 루틴] ① 네발기기 자세에서 손목 주변을 풀어주는 체중 이동 스트레칭 1분 → ② 바닥에 엎드려 양손을 정확히 가슴 옆 라인에 맞춰 팔뚝이 바닥과 수직인 상태를 확인한 뒤 밀어 올리는 '데드스톱 푸시업' 8회 3세트 → ③ 푸시업 바 또는 접은 수건을 손바닥 아랫부분에 받쳐 손목 부담을 줄인 채 가슴 옆 손 위치를 유지하는 푸시업 10회 3세트를 진행하세요."
-            },
-            "video": "https://youtube.com/shorts/IGA9a1RVScU?si=ED6ZlN9tBBZ-BN0D"
-        },
-        "partialRep": {
-            "description": "현재 푸시업 동작 시 팔을 충분히 굽히지 못하고 있습니다!",
-            "cause": "가슴과 팔의 힘이 부족해서 몸을 바닥 가까이 끝까지 내리지 못하기 때문입니다.",
-            "solution": "가슴과 바닥 사이에 주먹 하나가 들어갈 정도까지 팔꿈치를 90도 가까이 충분히 굽혀 내려가세요. 팔 힘이 부족하다면 무릎을 바닥에 대거나 책상을 짚고 수행하여 끝까지 내려갔다가 올라오는 연습을 먼저 해보세요.",
-            "reference": "NSCA. 『Essentials of Strength Training and Conditioning (4th Ed.)』 (상지 다중관절 완전 가동범위 및 점진적 부하 원리)",
-            "routines": {
-                "1": "[즉시 인지 루틴] 가슴 아래 바닥에 주먹 높이의 물건(말아놓은 수건 등)을 두고, 팔꿈치를 90도 가까이 충분히 굽혀 가슴이 닿을 때까지 내려갔다 올라오도록 의식하며 수행하세요.",
-                "2_4": "[가동성·활성화 루틴] ① 무릎을 바닥에 대거나 책상을 짚어 부담을 줄인 상태에서, 가슴과 바닥(또는 책상 모서리) 사이에 주먹 하나가 들어갈 정도까지 끝까지 내려갔다 올라오는 '풀 레인지 니/인클라인 푸시업' 10회 2세트를 진행하세요.",
-                "5_plus": "[집중 교정 루틴] ① 4초 동안 버티며 가슴이 바닥 가까이(주먹 하나 높이) 닿을 때까지 끝까지 내려간 뒤 무릎을 대고 올라오는 '네거티브(신장성) 푸시업' 8회 3세트 → ② 가슴 아래에 말아놓은 수건을 두고 매 회 가슴을 터치하고 올라오는 '타겟 터치 니 푸시업' 10회 3세트 → ③ 책상을 짚고 팔꿈치를 90도까지 굽혀 수행하는 인클라인 푸시업 12회 3세트를 수행하세요."
-            },
-            "video": "https://youtube.com/shorts/IGA9a1RVScU?si=ED6ZlN9tBBZ-BN0D"
-        }
-    },
-    "plank": {
-        "hipDrop": {
-            "description": "현재 플랭크 동작 시 엉덩이가 아래로 처지고 있습니다!",
-            "cause": "배와 엉덩이에 힘이 풀려서 몸을 일자로 버티지 못하고 허리에 무게가 실리기 때문입니다.",
-            "solution": "배꼽을 등 쪽으로 당긴다는 느낌으로 배에 힘을 주고 엉덩이와 허벅지를 꽉 조이세요. 양 팔꿈치를 발끝 쪽으로 살짝 당기듯 바닥을 밀어내며 엉덩이를 등 높이에 맞춰 들어 올리세요.",
-            "reference": "Stuart McGill. 『Low Back Disorders (2nd Ed.)』 (골반 후방 경사 제어 및 복벽 브레이싱 원리)",
-            "routines": {
-                "1": "[즉시 인지 루틴] 배꼽을 등 쪽으로 당기듯 배에 힘을 주고 엉덩이·허벅지를 꽉 조인 뒤, 양 팔꿈치를 발끝 쪽으로 살짝 당기듯 바닥을 밀어내며 엉덩이를 등 높이에 맞춰 들어 올린 상태로 유지하세요.",
-                "2_4": "[가동성·활성화 루틴] ① 누워서 배꼽을 등 쪽으로 당기며 허리로 바닥을 누르는 '골반 후방 경사(Pelvic Tilt) 버티기' 20초 2세트 → ② 양 팔꿈치를 발끝 쪽으로 당기며 배·엉덩이·허벅지를 최대로 조여 짧고 굵게 버티는 '15초 RKC 플랭크' 3세트를 수행하세요.",
-                "5_plus": "[집중 교정 루틴] ① 코어 지구력을 기르는 맥길 컬업 및 데드버그 각 12회 3세트 → ② 누워서 엉덩이와 허벅지를 꽉 조여 들어 올리는 '글루트 브릿지 홀드' 20초 3세트 → ③ 시간을 15초로 짧게 나누어 팔꿈치를 발끝 쪽으로 당기며 엉덩이를 등 높이에 완벽히 맞춰 버티고 10초 쉬는 '인터벌 코어 플랭크' 4세트를 진행하세요."
-            },
-            "video": "https://youtube.com/shorts/mUDVAgXyqZg?si=0Cglo_MKhHhjVq43"
-        },
-        "hipHigh": {
-            "description": "현재 플랭크 동작 시 엉덩이가 위로 솟고 있습니다!",
-            "cause": "배에 들어가는 힘을 피하려고 엉덩이를 높이 들어 어깨와 다리 힘으로만 버티려 하기 때문입니다.",
-            "solution": "가슴을 양 팔꿈치 사이로 살짝 앞으로 보내면서 엉덩이를 천천히 내려, 뒤통수·등·엉덩이·발뒤꿈치가 평평한 일직선이 되도록 맞추고 배의 힘으로 버티세요.",
-            "reference": "Stuart McGill. 『Low Back Disorders (2nd Ed.)』 / NSCA. 『Essentials of Strength Training and Conditioning (4th Ed.)』",
-            "routines": {
-                "1": "[즉시 인지 루틴] 가슴을 양 팔꿈치 사이로 살짝 앞으로 보내면서 엉덩이를 천천히 내려, 뒤통수·등·엉덩이·발뒤꿈치가 평평한 일직선이 되도록 맞춘 뒤 배의 힘으로 버티세요.",
-                "2_4": "[가동성·활성화 루틴] ① 플랭크 자세에서 가슴을 양 팔꿈치 사이로 이동시키며 몸을 앞뒤로 살짝 움직여 일직선 지점을 찾는 '바디 쏘우(Body Saw)' 8회 2세트 → ② 뒤통수·등·엉덩이·발뒤꿈치 일직선을 맞춘 상태에서 20초씩 끊어 배의 힘으로 버티는 플랭크 2세트를 진행하세요.",
-                "5_plus": "[집중 교정 루틴] ① 누워서 허리를 바닥에 붙이고 어깨와 다리를 살짝 들어 오직 배의 힘으로 버티는 법을 익히는 '할로우 바디 홀드' 20초 3세트 → ② 무릎을 바닥에 대고 가슴을 팔꿈치 사이로 보내 뒤통수-등-엉덩이 일직선을 정확히 유지하는 '니 플랭크' 30초 3세트 → ③ 측면 거울이나 카메라로 평평한 일직선을 확인하며 수행하는 정자세 플랭크 20초 3세트를 수행하세요."
-            },
-            "video": "https://youtube.com/shorts/mUDVAgXyqZg?si=0Cglo_MKhHhjVq43"
-        },
-        "neckDrop": {
-            "description": "현재 플랭크 동작 시 고개가 아래로 푹 떨어지고 있습니다!",
-            "cause": "머리와 등을 일직선으로 유지하지 못하고 시선을 발이나 배 쪽으로 두어 목에 힘이 풀렸기 때문입니다.",
-            "solution": "시선을 발쪽이 아닌 양손(주먹) 사이의 바닥에 고정하고, 턱을 목 쪽으로 살짝 당겨 뒤통수가 등과 나란히 일직선이 되도록 머리를 들어 올리세요.",
-            "reference": "NSCA. 『Essentials of Strength Training and Conditioning (4th Ed.)』 / Stuart McGill. 『Low Back Disorders (2nd Ed.)』",
-            "routines": {
-                "1": "[즉시 인지 루틴] 시선을 발쪽이 아닌 양손(주먹) 사이의 바닥에 고정하고, 턱을 목 쪽으로 살짝 당겨(친 턱) 뒤통수가 등과 나란히 일직선이 되도록 머리를 들어 올린 채 버티세요.",
-                "2_4": "[가동성·활성화 루틴] ① 벽에 등과 뒤통수를 붙이고 턱을 목 쪽으로 살짝 당겨 목 힘을 깨우는 '월 친 턱(Wall Chin Tuck)' 10회 2세트 → ② 양손(주먹) 사이 바닥에 시선을 고정한 채 뒤통수를 등 높이로 맞춰 버티는 20초 플랭크 2세트를 진행하세요.",
-                "5_plus": "[집중 교정 루틴] ① 바닥에 누워 턱을 목 쪽으로 살짝 당기며 뒤통수로 바닥을 지그시 누르는 '심부 목 굴곡근 강화 운동' 10초 버티기 5회 → ② 네발기기 자세에서 시선을 양손 사이 바닥에 두고 뒤통수와 등을 일직선으로 유지하는 연습 20초 3세트 → ③ 양손 사이 바닥에 시선을 고정하고 턱을 당겨 뒤통수-등 일직선을 유지하는 정자세 플랭크 20초 3세트를 수행하세요."
-            },
-            "video": "https://youtube.com/shorts/mUDVAgXyqZg?si=0Cglo_MKhHhjVq43"
-        },
-        "neckHigh": {
-            "description": "현재 플랭크 동작 시 고개를 너무 높이 들고 있습니다!",
-            "cause": "바닥을 보지 않고 앞이나 위를 쳐다봐서 목 뒤쪽과 어깨에 불필요한 힘이 들어가기 때문입니다.",
-            "solution": "정면이나 위를 올려다보지 말고 시선을 양손 사이 바닥으로 자연스럽게 내려, 뒷목이 길어진다는 느낌으로 머리와 척추를 일직선으로 유지하세요.",
-            "reference": "NSCA. 『Essentials of Strength Training and Conditioning (4th Ed.)』 (경추 과신전 방지 및 상부 승모근 과긴장 억제 원리)",
-            "routines": {
-                "1": "[즉시 인지 루틴] 정면이나 위를 보던 시선을 양손 사이 바닥으로 자연스럽게 내리고, 뒷목이 길어진다는 느낌으로 머리와 척추를 일직선으로 맞춰 어깨와 목 뒤쪽의 불필요한 힘을 빼세요.",
-                "2_4": "[가동성·활성화 루틴] ① 뭉친 목 뒤쪽과 상부 승모근을 풀어주는 목 스트레칭(각 20초) → ② 양손 사이 바닥에 시선 고정점을 두고 뒷목을 길게 늘여 머리와 척추를 일직선으로 유지하는 20초 플랭크 2세트를 수행하세요.",
-                "5_plus": "[집중 교정 루틴] ① 턱을 가볍게 당겨 긴장된 뒷목(후두하근)과 어깨를 이완하는 스트레칭 1분 → ② 네발기기 자세에서 시선을 양손 사이 바닥에 두고 뒷목부터 척추까지 길게 일직선으로 유지하며 팔다리를 뻗는 '버드독(Bird-Dog)' 좌우 10회 3세트 → ③ 양손 사이 바닥을 바라보며 뒷목이 길어지는 느낌으로 머리-척추 일직선을 유지하는 플랭크 25초 3세트를 진행하세요."
-            },
-            "video": "https://youtube.com/shorts/mUDVAgXyqZg?si=0Cglo_MKhHhjVq43"
-        }
-    }
-}
-
-
-def build_guide_feedback_list(data_source):
+def build_guide_feedback_list(
+    data_source,
+    videos_path=DEFAULT_VIDEOS_PATH,
+    content_path=DEFAULT_ERROR_CONTENT_PATH,
+):
     """
     백엔드 API(/api/guide) 또는 프론트엔드 렌더링에 바로 전달할 수 있도록
     각 오류별 설명, 원인, 교정법, 횟수별 루틴, 유튜브 임베드 URL 및 HTML을 리스트로 반환합니다.
     """
+    videos_catalog = load_videos_catalog(videos_path)
+    error_content = load_error_content(content_path)
     all_errors = get_all_errors_info(data_source)
     feedback_list = []
 
     for idx, ((exercise, error_name), count) in enumerate(all_errors, start=1):
-        info = error_info.get(exercise, {}).get(error_name, {
+        info = error_content.get(exercise, {}).get(error_name, {
+            "body_part": "unknown",
+            "type": "general",
             "description": "현재 알 수 없는 자세 오류가 발생하고 있습니다!",
             "cause": "정확한 원인을 파악할 수 없습니다.",
             "solution": "기본 자세 가이드를 다시 확인해 주세요.",
             "reference": "참고 문헌 없음",
             "routines": {},
-            "video": ""
+            "video_id": "",
         })
 
         prescription = get_routine_by_count(info, count)
-        raw_video_url = info.get("video", "")
-        embed_url = to_youtube_embed_url(raw_video_url)
-        video_html = get_video_section_html(raw_video_url)
+        video_id = info.get("video_id", "")
+        video_meta = videos_catalog.get(video_id, {
+            "id": video_id,
+            "exercise": exercise,
+            "body_part": info.get("body_part", ""),
+            "category": info.get("type", ""),
+            "title": "",
+            "url": "",
+            "embed_url": "",
+            "video_html": get_video_section_html(""),
+        })
+
+        raw_video_url = video_meta.get("url", "")
+        embed_url = video_meta.get("embed_url", "")
+        video_html = video_meta.get("video_html", get_video_section_html(raw_video_url))
 
         feedback_list.append({
             "rank": idx,
             "is_top_error": idx == 1,
             "exercise": exercise,
             "error_name": error_name,
+            "body_part": info.get("body_part", ""),
+            "type": info.get("type", ""),
             "count": count,
             "description": info["description"],
             "cause": info["cause"],
@@ -304,9 +185,11 @@ def build_guide_feedback_list(data_source):
             "reference": info.get("reference", ""),
             "routine_level": prescription["level"],
             "routine": prescription["routine"],
+            "video_id": video_id,
+            "video_meta": video_meta,
             "video": raw_video_url,
             "embed_url": embed_url,
-            "video_html": video_html
+            "video_html": video_html,
         })
 
     return feedback_list
@@ -343,13 +226,14 @@ if __name__ == "__main__":
     if feedback_results:
         for item in feedback_results:
             prefix = "[최다 발생 오류]" if item["is_top_error"] else f"[추가 발생 오류 {item['rank'] - 1}]"
-            print(f"{prefix} ({item['exercise']} - {item['error_name']}, 총 {item['count']}회)")
+            print(f"{prefix} ({item['exercise']} / {item['body_part']} - {item['error_name']}, 총 {item['count']}회)")
             print(f"- 발생한 오류: {item['description']}")
             print(f"- 발생 원인: {item['cause']}")
             print(f"- 자세 교정 방법: {item['solution']}")
             print(f"- 처방 단계: {item['routine_level']}")
             print(f"- 맞춤형 교정 루틴: {item['routine']}")
             print(f"- 참고 문헌: {item['reference']}")
+            print(f"- 영상 ID: {item['video_id']}")
             print(f"- 유튜브 임베드 주소: {item['embed_url'] if item['embed_url'] else '가이드 영상 준비 중'}")
             print(f"- 화면 렌더링 HTML: {item['video_html']}")
             print()
