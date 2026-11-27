@@ -2,6 +2,7 @@
 import { createAnkleLimit } from "./ankle-limit.js";
 import { createBodyMeasure } from "./body-measure.js";
 import { ERROR_NAMES, EXERCISE_NAMES, MODE_TEXT, STATUS } from "./catalog.js";
+import { SHIN_MAX } from "./config.js";
 import { createDevTools } from "./devtools.js";
 import { createFeedback } from "./feedback.js";
 import { createMatchGlow, createReferenceFollow } from "./follow.js";
@@ -207,9 +208,10 @@ function measureBody(landmarks, world, now) {
 // 발목 상한 개인화 (F9): 반복 시도가 끝날 때마다 이 세션의 정강이 상한으로 정답 자세를 다시 만들고,
 // 상한을 낮췄으면 "오늘 발목 범위에 맞춘 정답 자세예요"를 보여 준다. 따라 하기도 같은 정답 자세라 함께 바뀐다
 function applyAnkleLimit() {
-  follow.setShinMax(ankleLimit.limit);
-  referenceControls.showAnkleNote(ankleLimit.limit !== null);
-  devTools.showAnkleLimit(ankleLimit.limit, ankleLimit.summary, follow.thetaMax);
+  const used = follow.setShinMax(ankleLimit.limit); // 통과 깊이까지 못 내려가면 follow가 상한을 올려 쓴다
+  const limit = used < SHIN_MAX ? used : null;
+  referenceControls.showAnkleNote(limit !== null);
+  devTools.showAnkleLimit(limit, ankleLimit.summary, follow.thetaMax);
 }
 
 // 정답 뼈대 (F6·F7): 몸 길이를 잰 뒤, 고른 보기에 따라 그린다.
@@ -224,7 +226,7 @@ function showReference(view, now) {
   let points = null;
   if (choice === "follow") points = follow.pose(view);
   else if (choice === "playback") points = playback?.pose(now);
-  if (points) drawReference(context, points, glowing, referenceWarnParts(view.indicators));
+  if (points) drawReference(context, points, glowing, referenceWarnParts(view.indicators), choice === "playback");
 }
 
 // mannequin: 사용자 뼈대를 마네킹으로 그린다 (F8)

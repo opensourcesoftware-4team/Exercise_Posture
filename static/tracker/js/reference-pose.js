@@ -1,10 +1,21 @@
 // 체형 맞춤 정답 자세 계산기 (추가 기능 F5). F4에서 잰 몸 길이로, 깊이마다 그 사람에게 맞는 정답 관절 좌표를 만든다.
 // 카메라와 DOM을 쓰지 않는 순수 함수다. 좌표는 픽셀이고 y는 아래로 갈수록 커진다.
 // 계산은 "발목이 원점이고 사람이 +x 쪽을 보는" 기준 좌표에서 하고, 마지막에 보는 방향과 발목 위치로 옮긴다.
-import { DEPTH_TARGET, MASS_HAT, MASS_SHANK, MASS_THIGH, PUSHUP, SHIN_MAX, TRUNK_EXTRA_MAX } from "./config.js";
+import {
+  DEPTH_TARGET,
+  ELBOW_OUT_ANGLE,
+  KNEE_OUT_ANGLE,
+  MASS_HAT,
+  MASS_SHANK,
+  MASS_THIGH,
+  REFERENCE_PUSHUP_BOTTOM,
+  SHIN_MAX,
+  TRUNK_EXTRA_MAX,
+} from "./config.js";
 
 const RADIANS_PER_DEGREE = Math.PI / 180;
 const BISECTION_STEPS = 20; // 이분 탐색 횟수 (30° 범위를 0.00003°까지 좁힌다)
+const SIDE_STEPS = 50; // 푸시업 위팔의 옆 길이를 고쳐 가며 푸는 최대 횟수 (보통 10번 안에 1e-9px까지 맞는다)
 const ORIGIN = { x: 0, y: 0 };
 
 const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
@@ -33,6 +44,14 @@ function bisect(f, low, high) {
   return (from + to) / 2;
 }
 
+// 옆에서 본 분절 길이(px): 분절을 몸 바깥으로 outAngle(°)만큼 열면(스쿼트 무릎 벌림, 푸시업 팔꿈치 벌림) 앞뒤 성분만 cos만큼 줄고
+// 위아래 성분은 그대로다. degrees는 옆에서 본(화면의) 분절-수직 각이다. 수직(0°)이면 측정 길이 그대로, 수평(90°)이면 길이 × cos(벌림 각)
+export function sideLength(length, degrees, outAngle) {
+  const angle = degrees * RADIANS_PER_DEGREE;
+  const open = Math.cos(outAngle * RADIANS_PER_DEGREE);
+  return length / Math.sqrt(Math.cos(angle) ** 2 + (Math.sin(angle) / open) ** 2);
+}
+
 // 스쿼트 정답 자세 계산기 (명세 6.1). body: F4 측정값 { lengths, facing, heelOffset, heelDrop }
 // 무게중심이 발 중앙 위에 오도록 정강이·상체 기울기를 정한다. 상체는 정강이와 나란한 것이 기본이고,
 // 정강이가 shinMax에 걸리면 상체만 TRUNK_EXTRA_MAX까지 더 숙인다. 그래도 균형이 안 맞는 깊이는 이 체형에 무리다.
@@ -45,7 +64,7 @@ export function createSquatReference(body, shinMax = SHIN_MAX) {
   // 정강이 기울기 shin, 허벅지-수직 각 thigh(엉덩이는 무릎 뒤로 빠진다), 상체 기울기 lean(°)으로 쌓은 관절
   function joints(shin, thighAngle, lean) {
     const knee = step(ORIGIN, shank, shin);
-    const hip = step(knee, thigh, -thighAngle);
+    const hip = step(knee, sideLength(thigh, thighAngle, KNEE_OUT_ANGLE), -thighAngle);
     const shoulder = step(hip, torso, lean);
     return { ankle: ORIGIN, knee, hip, shoulder };
   }
@@ -122,6 +141,7 @@ function bodyLine(shoulder, leg, head) {
 // 푸시업 정답 자세 계산기 (명세 6.2). body: F4 측정값 { lengths, facing, floorDrop }
 // 발목을 고정점으로 둔다(F4의 leg가 엉덩이–발목 길이라서). 발끝으로 서면 발목이 들리므로 손은 발목보다 floorDrop만큼 아래 바닥을 짚는다.
 // 손목은 팔을 다 폈을 때 어깨 바로 아래 바닥에 고정하고, 팔꿈치 각에 따라 몸 선이 발목을 축으로 내려간다.
+// 팔꿈치는 몸통에서 ELBOW_OUT_ANGLE만큼 벌려, 옆에서 본 위팔이 기운 만큼 짧아진다 (아래팔은 바닥을 짚어 벌리지 않는다).
 export function createPushupReference(body) {
   const { upperArm, forearm, leg, torso, head } = body.lengths;
   const length = leg + torso; // 발목–어깨 (몸이 일직선)
@@ -129,13 +149,23 @@ export function createPushupReference(body) {
   const wrist = { x: Math.sqrt(Math.max(0, length * length - (arm - body.floorDrop) ** 2)), y: body.floorDrop };
 
   return {
-    // 발목 ankle(px)에 맞춘 팔꿈치 각 elbowAngle(°)의 정답 관절 좌표. 각은 PUSHUP.BOTTOM_MAX(바닥)~180으로 자른다
+    // 발목 ankle(px)에 맞춘 팔꿈치 각 elbowAngle(°)의 정답 관절 좌표. 각은 REFERENCE_PUSHUP_BOTTOM(바닥)~180으로 자른다
     pose(ankle, elbowAngle) {
-      const alpha = clamp(elbowAngle, PUSHUP.BOTTOM_MAX, 180) * RADIANS_PER_DEGREE;
-      const reach = Math.sqrt(upperArm ** 2 + forearm ** 2 - 2 * upperArm * forearm * Math.cos(alpha)); // 손목–어깨
-      const shoulder = circleIntersections(ORIGIN, length, wrist, reach).reduce((a, b) => (a.y < b.y ? a : b)); // 위쪽
-      // 팔꿈치는 손목·어깨에서 각각 아래팔·위팔 길이인 점 중 발 쪽(뒤)이다
-      const elbow = circleIntersections(wrist, forearm, shoulder, upperArm).reduce((a, b) => (a.x < b.x ? a : b));
+      const alpha = clamp(elbowAngle, REFERENCE_PUSHUP_BOTTOM, 180) * RADIANS_PER_DEGREE;
+      // 옆에서 본 위팔 길이는 위팔 방향에 따라 달라서, 그 길이로 자세를 풀고 나온 방향으로 길이를 고치기를 되풀이한다
+      let side = upperArm;
+      let shoulder;
+      let elbow;
+      for (let i = 0; i < SIDE_STEPS; i += 1) {
+        const reach = Math.sqrt(side ** 2 + forearm ** 2 - 2 * side * forearm * Math.cos(alpha)); // 손목–어깨
+        shoulder = circleIntersections(ORIGIN, length, wrist, reach).reduce((a, b) => (a.y < b.y ? a : b)); // 위쪽
+        // 팔꿈치는 손목·어깨에서 각각 아래팔·위팔 길이인 점 중 발 쪽(뒤)이다
+        elbow = circleIntersections(wrist, forearm, shoulder, side).reduce((a, b) => (a.x < b.x ? a : b));
+        const upperAngle = Math.atan2(Math.abs(elbow.x - shoulder.x), elbow.y - shoulder.y) / RADIANS_PER_DEGREE;
+        const next = sideLength(upperArm, upperAngle, ELBOW_OUT_ANGLE);
+        if (Math.abs(next - side) < 1e-9) break;
+        side = next;
+      }
       return toScreen(ankle, body.facing, { ankle: ORIGIN, ...bodyLine(shoulder, leg, head), shoulder, elbow, wrist });
     },
   };

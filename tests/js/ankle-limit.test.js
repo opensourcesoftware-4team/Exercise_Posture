@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createAnkleLimit, percentile } from "../../static/tracker/js/ankle-limit.js";
-import { ANKLE_MIN_ATTEMPTS, ANKLE_PERCENTILE, SHIN_MAX, SQUAT, TRUNK_EXTRA_MAX } from "../../static/tracker/js/config.js";
+import { ANKLE_MIN_ATTEMPTS, ANKLE_PERCENTILE, PLAYBACK_PERIOD_SECONDS, SHIN_MAX, SQUAT, TRUNK_EXTRA_MAX } from "../../static/tracker/js/config.js";
 import { createReferenceFollow } from "../../static/tracker/js/follow.js";
 import { createPlayback } from "../../static/tracker/js/playback.js";
 import { createSquatReference } from "../../static/tracker/js/reference-pose.js";
@@ -123,10 +123,20 @@ test("맞춰 보기·따라 하기는 바꾼 정강이 상한의 정답 자세�
   const follow = createReferenceFollow("squat", SQUAT_SIZE);
   const playback = createPlayback("squat", follow, 1, 0);
   const original = follow.thetaMax;
-  follow.setShinMax(20);
-  assert.equal(follow.thetaMax, createSquatReference(SQUAT_SIZE, 20).thetaMax);
-  assert.deepEqual(follow.poseAt({ x: 0, y: 0 }, 1, 30), createSquatReference(SQUAT_SIZE, 20).pose({ x: 0, y: 0 }, 30));
-  assert.ok(Math.abs(playback.depth(2000) - follow.thetaMax) < 1e-9); // 재생도 새 최대 깊이까지 내려간다
+  assert.equal(follow.setShinMax(38), 38); // 이 상한으로도 통과 깊이까지 내려가면 그대로 쓴다
+  assert.equal(follow.thetaMax, createSquatReference(SQUAT_SIZE, 38).thetaMax);
+  assert.deepEqual(follow.poseAt({ x: 0, y: 0 }, 1, 30), createSquatReference(SQUAT_SIZE, 38).pose({ x: 0, y: 0 }, 30));
+  assert.ok(Math.abs(playback.depth((PLAYBACK_PERIOD_SECONDS * 1000) / 2) - follow.thetaMax) < 1e-9); // 재생도 새 최대 깊이까지 내려간다
   follow.setShinMax(null);
   assert.equal(follow.thetaMax, original);
+});
+
+test("발목 범위로 낮춘 상한 때문에 정답 자세가 통과 깊이(70°)보다 얕아지면, 통과 깊이에 닿을 때까지 상한을 올려 쓴다", () => {
+  const follow = createReferenceFollow("squat", SQUAT_SIZE);
+  assert.ok(createSquatReference(SQUAT_SIZE, 20).thetaMax < SQUAT.PASS_MIN); // 20°로는 얕다
+  const used = follow.setShinMax(20);
+  assert.ok(used > 20 && used <= SHIN_MAX);
+  assert.ok(follow.thetaMax >= SQUAT.PASS_MIN);
+  assert.ok(createSquatReference(SQUAT_SIZE, used - 1).thetaMax < SQUAT.PASS_MIN); // 가장 작게 올린 값이다
+  assert.deepEqual(follow.poseAt({ x: 0, y: 0 }, 1, 50), createSquatReference(SQUAT_SIZE, used).pose({ x: 0, y: 0 }, 50));
 });

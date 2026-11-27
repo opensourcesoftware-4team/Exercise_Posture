@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { PLAYBACK_PERIOD_SECONDS, PLAYBACK_SPEED_DEFAULT, PLAYBACK_SPEEDS, PUSHUP } from "../../static/tracker/js/config.js";
+import { PLAYBACK_PERIOD_SECONDS, PLAYBACK_SPEED_DEFAULT, PLAYBACK_SPEEDS, REFERENCE_PUSHUP_BOTTOM } from "../../static/tracker/js/config.js";
 import { createReferenceFollow } from "../../static/tracker/js/follow.js";
 import { createPlayback, depthFraction, hasPlayback } from "../../static/tracker/js/playback.js";
 
@@ -29,8 +29,8 @@ test("깊이 비율은 시작 자세 0 → 반 바퀴에서 1 → 한 바퀴에�
   close(depthFraction(1.5), 1); // 계속 반복한다
 });
 
-test("1배속: 시작 자세에서 2초 동안 thetaMax까지 내려가고, 2초 동안 올라온다", () => {
-  assert.equal(HALF, 2000);
+test("1배속: 시작 자세에서 1.6초 동안 thetaMax까지 내려가고, 1.6초 동안 올라온다 (명세 4초의 1.25배 빠르기)", () => {
+  assert.equal(HALF, 1600);
   const playback = createPlayback("squat", SQUAT_FOLLOW, 1, 0);
   close(playback.depth(0), 0);
   close(playback.depth(HALF), THETA_MAX);
@@ -40,7 +40,7 @@ test("1배속: 시작 자세에서 2초 동안 thetaMax까지 내려가고, 2초
   close(playback.depth(2 * HALF + 500), playback.depth(500)); // 다음 반복도 같다
 });
 
-test("배속을 낮추면 한 번이 길어진다: 기본 0.75배, 0.5배는 내려가기에 4초", () => {
+test("배속을 낮추면 한 번이 길어진다: 기본 0.75배, 0.5배는 내려가기에 3.2초", () => {
   assert.deepEqual(PLAYBACK_SPEEDS, [0.5, 0.75, 1]);
   assert.equal(PLAYBACK_SPEED_DEFAULT, 0.75);
   close(createPlayback("squat", SQUAT_FOLLOW, 0.5, 0).depth(2 * HALF), THETA_MAX);
@@ -63,11 +63,12 @@ test("일시정지하면 그 깊이에 멈추고, 다시 재생하면 멈춘 지
 
 test("재생 중에 배속을 바꿔도 자세가 튀지 않고, 바꾼 배속으로 이어진다", () => {
   const playback = createPlayback("squat", SQUAT_FOLLOW, 1, 0);
-  const before = playback.depth(1000); // 1/4 바퀴
-  playback.setSpeed(0.5, 1000);
-  close(playback.depth(1000), before);
-  close(playback.depth(1000 + HALF), THETA_MAX); // 0.5배로 1/4 바퀴 더 가면 가장 깊은 곳
-  playback.pause(1000 + HALF);
+  const quarter = HALF / 2; // 1배속 1/4 바퀴
+  const before = playback.depth(quarter);
+  playback.setSpeed(0.5, quarter);
+  close(playback.depth(quarter), before);
+  close(playback.depth(quarter + HALF), THETA_MAX); // 0.5배로 1/4 바퀴 더 가면 가장 깊은 곳
+  playback.pause(quarter + HALF);
   playback.setSpeed(1, 9000); // 멈춘 채로 바꾸면 계속 멈춰 있다
   close(playback.depth(9000), THETA_MAX);
   assert.equal(playback.playing, false);
@@ -82,10 +83,10 @@ test("처음부터 다시 재생하면 시작 자세에서 출발하고, 멈춰 
   close(playback.depth(8000 + HALF), THETA_MAX);
 });
 
-test("푸시업은 팔꿈치 각 180° → 바닥(90°) → 180°로 재생하고, 플랭크는 재생하지 않는다", () => {
+test("푸시업은 팔꿈치 각 180° → 가슴이 바닥 가까이(60°) → 180°로 재생하고, 플랭크는 재생하지 않는다", () => {
   const playback = createPlayback("pushup", createReferenceFollow("pushup", PRONE_SIZE), 1, 0);
   close(playback.depth(0), 180);
-  close(playback.depth(HALF), PUSHUP.BOTTOM_MAX);
+  close(playback.depth(HALF), REFERENCE_PUSHUP_BOTTOM);
   close(playback.depth(2 * HALF), 180);
   assert.equal(hasPlayback("squat"), true);
   assert.equal(hasPlayback("pushup"), true);
@@ -114,6 +115,6 @@ test("재생하는 정답 자세는 맞춰 보기와 같은 체형 맞춤 자세
   const ankle = { x: 300, y: 580 };
   playback.see(judging(ankle));
   const bottom = playback.pose(HALF);
-  assert.deepEqual(bottom, follow.poseAt(ankle, 1, PUSHUP.BOTTOM_MAX));
+  assert.deepEqual(bottom, follow.poseAt(ankle, 1, REFERENCE_PUSHUP_BOTTOM));
   close(bottom.wrist.y, ankle.y + PRONE_SIZE.floorDrop);
 });

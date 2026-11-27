@@ -1,11 +1,11 @@
 // 따라 하기 (추가 기능 F7). 체형 맞춤 정답 뼈대(F5)가 반복 동작을 천천히 재생한다. DOM을 쓰지 않아 Node 테스트를 할 수 있다.
-import { PLAYBACK_PERIOD_SECONDS, PUSHUP } from "./config.js";
+import { PLAYBACK_PERIOD_SECONDS, REFERENCE_PUSHUP_BOTTOM } from "./config.js";
 import { facingOf } from "./geometry.js";
 
 // 깊이 비율(0 시작 자세 ~ 1 가장 깊은 곳)에 맞는 종목별 깊이(°). 플랭크는 정지 자세라 재생하지 않는다 (명세 8장)
 const DEPTHS = {
   squat: (fraction, thetaMax) => thetaMax * fraction, // 허벅지 각 0 → thetaMax (F5에서 이미 DEPTH_TARGET 이하)
-  pushup: (fraction) => 180 - (180 - PUSHUP.BOTTOM_MAX) * fraction, // 팔꿈치 각 180 → 바닥(90°)
+  pushup: (fraction) => 180 - (180 - REFERENCE_PUSHUP_BOTTOM) * fraction, // 팔꿈치 각 180 → 가슴이 바닥 가까이(60°)
 };
 
 // 재생할 수 있는 종목인가
