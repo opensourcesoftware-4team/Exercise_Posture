@@ -30,11 +30,11 @@ body.db-page {
   background: var(--glass); backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
   padding: 1.2rem 4rem;
-  display: flex; justify-content: space-between; align-items: center;
+  display: flex; flex-wrap: wrap; gap: 12px 24px; justify-content: space-between; align-items: center;
 }
 .db-logo { font-family: 'Urbanist', sans-serif; font-weight: 800; font-size: 1.5rem; letter-spacing: -1px; }
 .db-logo span { color: var(--accent); }
-.db-nav-links { display: flex; gap: 2.5rem; list-style: none; margin: 0; padding: 0; }
+.db-nav-links { display: flex; flex-wrap: wrap; gap: 8px 2.5rem; list-style: none; margin: 0; padding: 0; }
 .db-nav-links a { font-weight: 600; font-size: 0.9rem; color: var(--text-muted); text-decoration: none; transition: 0.3s; }
 .db-nav-links a:hover, .db-nav-links li.active a { color: var(--accent); }
 
@@ -96,6 +96,8 @@ body.db-page {
 .db-top-title { font: 800 1.3rem 'Urbanist', sans-serif; margin: 0 0 6px; }
 .db-top-sub { color: var(--text-muted); font-size: 0.9rem; margin: 0 0 20px; }
 .db-top-ok { color: var(--ok); font-weight: 600; }
+.db-top-link { color: var(--accent); font-weight: 600; font-size: 0.9rem; text-decoration: none; }
+.db-top-link:hover { text-decoration: underline; }
 .db-btn {
   display: inline-block; padding: 12px 22px; border-radius: 50px; text-decoration: none;
   background: var(--accent); color: #fff; font-weight: 700; font-size: 0.9rem;
@@ -126,7 +128,10 @@ body.db-page {
 .db-message { background: rgba(244, 63, 94, 0.08); border: 1px solid rgba(244, 63, 94, 0.3); color: #fda4af; padding: 14px 18px; border-radius: 12px; margin-bottom: 24px; }
 
 @media (max-width: 900px) {
-  .db-nav { padding: 1rem 1.5rem; }
+  /* 좁은 화면: 메뉴가 로고 아래로 줄을 바꾸므로, 화면 위에 띄우지 않고 자리를 차지하게 둔다 */
+  .db-nav { position: sticky; padding: 1rem 1.5rem; }
+  .db-nav-links { column-gap: 1.25rem; }
+  .db-main { margin-top: 0; }
   .db-main { padding: 24px 16px; }
   .db-grid, .db-summary { grid-template-columns: 1fr; }
   .db-header { flex-direction: column; align-items: flex-start; gap: 16px; }

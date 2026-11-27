@@ -69,6 +69,11 @@ def test_tracker_record_reaches_dashboard_and_guide(client):
     assert [(g["key"], g["count"]) for g in guide["guides"]] == [
         ("partialRep", 2), ("torsoLean", 1), ("heelLift", 1), ("shinLean", 0), ("kneeValgus", 0),
     ]
+    # 나온 횟수에 맞춘 교정 루틴 (Exercise-guide.py: 1회 / 2~4회 / 5회 이상). 나오지 않은 오답은 루틴이 없다
+    routines = {g["key"]: g["routine"] for g in guide["guides"]}
+    assert "2~4회" in routines["partialRep"]["level"] and routines["partialRep"]["routine"]
+    assert "1회" in routines["torsoLean"]["level"]
+    assert routines["shinLean"] is None
 
 
 def test_guide_covers_every_error_key(client):
@@ -77,11 +82,28 @@ def test_guide_covers_every_error_key(client):
         assert guide["sessions"] == 0
         assert {g["key"] for g in guide["guides"]} == keys
         for g in guide["guides"]:
-            assert g["count"] == 0
-            assert g["description"] and g["cause"] and g["solution"]
-            assert g["videoReady"] is False  # 가이드 영상 파일은 아직 없다
+            assert g["count"] == 0 and g["routine"] is None
+            assert g["description"] and g["cause"] and g["solution"] and g["reference"]
+            # 가이드 영상은 유튜브 임베드 주소로 준다 (data/videos.json)
+            assert g["video"] is None or g["video"]["embedUrl"].startswith("https://www.youtube.com/embed/")
+    squat = {g["key"]: g for g in client.get("/api/guide?exercise=squat").get_json()["guides"]}
+    assert squat["torsoLean"]["video"]["title"]
     assert client.get("/api/guide?exercise=lunge").status_code == 400
     assert client.get("/api/guide").status_code == 400
+
+
+def test_exercise_guide_reads_its_data_files():
+    """Exercise-guide.py를 그대로 실행할 때 쓰는 기본 경로(data/)에 오답 콘텐츠와 영상 목록이 있다"""
+    from guide import exercise_guide
+
+    content = exercise_guide.load_error_content()
+    assert {exercise: set(keys) for exercise, keys in content.items()} == storage.ERROR_KEYS
+    videos = exercise_guide.load_videos_catalog()
+    for exercise, keys in content.items():
+        for key, info in keys.items():
+            assert info["video_id"] in videos, (exercise, key)
+    feedback = exercise_guide.build_guide_feedback_list([TRACKER_RECORD])
+    assert [(item["error_name"], item["count"]) for item in feedback] == [("partialRep", 2), ("torsoLean", 1), ("heelLift", 1)]
 
 
 def test_record_writes_from_other_sites_are_blocked(client):
