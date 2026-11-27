@@ -82,9 +82,13 @@ function renderErrors(stats) {
     box.append(el("p", "db-top-ok", "이 기간에는 반복된 오답이 없어요 ✅"));
     return;
   }
+  // 운동 가이드(기능 3)로 이동: 그 종목의 오답별 원인·교정 방법·횟수별 루틴 (#13)
+  const guideLink = el("a", "db-top-link", "교정 가이드 보기 →");
+  guideLink.href = `/guide/?exercise=${stats.exercise}`;
   box.append(
     el("p", "db-top-title", errorLabel(stats.exercise, stats.topError)),
     el("p", "db-top-sub", `선택한 기간 동안 ${stats.errorTotals[stats.topError]}회 나왔어요`),
+    guideLink,
   );
 }
 
