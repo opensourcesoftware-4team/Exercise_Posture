@@ -117,10 +117,30 @@
   line-height: 1.6;
 }
 
+/* 횟수별 교정 루틴: 단계(1회 / 2~4회 / 5회 이상)를 굵게 쓰고 그 아래에 루틴 */
+.guide-routine strong,
+.guide-routine span {
+  display: block;
+}
+
+.guide-routine strong {
+  margin-bottom: 4px;
+  color: #f59e0b;
+}
+
+/* 유튜브 가이드 영상: 카드 폭에 맞춘 16:9 */
 .guide-video {
-  width: 100%;
   margin-top: 12px;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
   border-radius: 12px;
+  background: #020617;
+}
+
+.guide-video iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
 }
 
 .guide-muted {
