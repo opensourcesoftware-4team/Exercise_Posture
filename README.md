@@ -33,15 +33,6 @@
 
 ## 📸 실행 화면
 
-<!-- 스크린샷 삽입 안내
-1. 추가 실행 화면 캡처 시 docs/images/ 폴더에 저장한 뒤 아래 예시처럼 추가해 주세요.
-
-![자세 분석 화면](docs/images/tracker-screen.png)
-![운동 기록 대시보드](docs/images/dashboard-screen.png)
-
-2. 아직 없는 파일을 img src로 가리켜 깨진 이미지를 표시하지 않습니다.
--->
-
 ### 메인 화면
 
 ![메인 화면](docs/images/main-screen.png)
@@ -50,16 +41,14 @@
 
 ![운동 공유 커뮤니티](docs/images/community-screen.png)
 
-> 실시간 자세 분석 · 운동 기록 대시보드 · 운동 가이드의 실제 화면 캡처는 추후 추가될 수 있습니다.
-
 ## 🧩 주요 기능
 
 | 기능 | 설명 | 담당 |
 | :--- | :--- | :---: |
-| **Posture-Tracker** | 웹캠 기반 실시간 운동 자세 분석과 피드백 화면 제공 | 김원빈 |
-| **Data-Storage** | 운동 세션 저장·조회 및 대시보드에서 기록과 통계 확인 | 김성재 |
-| **Exercise-Guide** | 운동 종목별 동작 안내 및 자세 교정 가이드 제공 | 전승희 |
-| **Workout-Sharing** | 운동 정보 공유 게시글 작성·조회 및 종목별 필터링 | 민유경 |
+| **Posture-Tracker** | 웹캠 기반 실시간 자세 분석·피드백(운동 기록하기), 체형 맞춤 정답 마네킹 연습 모드(연습하기) | 김원빈 |
+| **Data-Storage** | 운동 세션 저장·조회, 대시보드에서 종목·기간별 기록과 자주 틀린 자세 통계 확인 | 김성재 |
+| **Exercise-Guide** | 내 기록의 자세 오류별 원인·교정 방법, 오류 횟수별 교정 루틴과 가이드 영상 제공 | 전승희 |
+| **Workout-Sharing** | 운동 정보 공유 게시글 작성·조회·종목별 필터, 댓글, 내 운동 기록 첨부, PIN으로 게시글 삭제 | 민유경 |
 
 ### 기능별 화면으로 이동하기
 
@@ -172,6 +161,7 @@ python main.py
 | Python 웹 서버 | Flask + Waitress |
 
 - **카메라 사용:** 브라우저 보안 정책상 카메라는 일반적으로 `localhost` 또는 보안 연결(HTTPS)에서 사용할 수 있습니다. 같은 Wi-Fi의 다른 기기에서 PC의 IP 주소로 HTTP 접속하면 카메라 기능이 제한될 수 있습니다.
+- **서버 PC 전용 기능:** 운동 기록 저장·대시보드·운동 가이드는 서버 PC(`127.0.0.1`)에서만 쓸 수 있습니다. 같은 Wi-Fi의 다른 기기는 커뮤니티만 이용합니다.
 - **다른 기기에서 접속:** 같은 네트워크에서 서버 PC의 IP 주소와 포트를 사용해 접근할 수 있지만, Windows 방화벽이나 학교·공공 Wi-Fi의 기기 간 통신 제한으로 연결되지 않을 수 있습니다.
 - **데이터 보관:** 운동 세션과 게시글은 실행하는 컴퓨터에 로컬 저장됩니다. 실행 중 생성된 사용자 데이터는 일반적으로 Git으로 공유하지 않습니다.
 - **포트 변경:** 필요하면 `HOST`, `PORT` 환경변수로 서버 실행 주소 및 포트를 변경할 수 있습니다.
@@ -181,10 +171,7 @@ python main.py
 Python 테스트는 프로젝트 루트에서 실행합니다.
 
 ```bash
-# pytest가 없다면 설치
-python -m pip install pytest
-
-# 서버 및 기능 테스트
+# pytest는 requirements.txt로 함께 설치됩니다
 python -m pytest tests
 ```
 
@@ -194,27 +181,16 @@ JavaScript 트래커 판정 테스트는 **Node.js 22 이상**이 설치된 경�
 node --test "tests/js/*.test.js"
 ```
 
-> 테스트 환경과 파일 구성은 브랜치별로 달라질 수 있습니다. 실행 오류가 있다면 해당 브랜치의 `tests/` 디렉터리를 확인해 주세요.
-
 ## 👥 팀원
 
 **오픈소스 소프트웨어 · 4팀**
 
-<!-- 팀원 사진 삽입 안내
-프로필 사진을 docs/images/team/에 넣은 뒤 아래 표의 '📷 사진 추가 예정' 텍스트를 다음 태그로 교체해 주세요.
-- 전승희: <img src="docs/images/team/jeon-seunghui.png" alt="전승희 프로필" width="90">
-- 김원빈: <img src="docs/images/team/kim-wonbin.png" alt="김원빈 프로필" width="90">
-- 김성재: <img src="docs/images/team/kim-seongjae.png" alt="김성재 프로필" width="90">
-- 민유경: <img src="docs/images/team/min-yougyeong.png" alt="민유경 프로필" width="90">
-사진 파일명과 확장자는 자유롭게 바꿔도 되지만, src 경로를 실제 파일명에 맞춰 주세요.
--->
-
-| 프로필 사진 | 이름 | 역할 | GitHub |
-| :---: | :---: | :--- | :--- |
-| 📷 사진 추가 예정 | **전승희** | 팀장 | [@JSH-04](https://github.com/JSH-04) |
-| 📷 사진 추가 예정 | **김원빈** | 개발 리드 | [@plmokn044330-ship-it](https://github.com/plmokn044330-ship-it) |
-| 📷 사진 추가 예정 | **김성재** | 문서 담당 | [@sjae938](https://github.com/sjae938) |
-| 📷 사진 추가 예정 | **민유경** | 리뷰·품질 담당 | [@Minyou-gyeong](https://github.com/Minyou-gyeong) |
+| 이름 | 역할 | GitHub |
+| :---: | :--- | :--- |
+| **전승희** | 팀장 | [@JSH-04](https://github.com/JSH-04) |
+| **김원빈** | 개발 리드 | [@plmokn044330-ship-it](https://github.com/plmokn044330-ship-it) |
+| **김성재** | 문서 담당 | [@sjae938](https://github.com/sjae938) |
+| **민유경** | 리뷰·품질 담당 | [@Minyou-gyeong](https://github.com/Minyou-gyeong) |
 
 ## 🤝 기여하기
 
